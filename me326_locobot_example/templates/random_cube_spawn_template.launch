@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<launch>
+    <param name="yellow_cube_model" textfile="$(find me326_locobot_example)/model/yellow_cube.urdf"/>
+    <param name="blue_cube_model" textfile="$(find me326_locobot_example)/model/blue_cube.urdf"/>
+    <param name="green_cube_model" textfile="$(find me326_locobot_example)/model/green_cube.urdf"/>
+    <param name="red_cube_model" textfile="$(find me326_locobot_example)/model/red_cube.urdf"/>
+    {{ADD_CUBES}}
+</launch>
