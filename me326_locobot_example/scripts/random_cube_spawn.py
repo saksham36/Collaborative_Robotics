@@ -26,7 +26,7 @@ def main(args):
                                 if tuple((x,y)) not in positions:
                                     positions.add((x,y))
                                     break
-                             templated_file.write('    <node name="spawn_{}_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x {} -y {} -z 0.1 -param {}_cube_model -model {}_cube  respawn="false" output="screen" />'.format(c, x, y, color, color))
+                             templated_file.write('    <node name="spawn_{}_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x {} -y {} -z 0.1 -param {}_cube_model -model {}_cube_{}" respawn="false" output="screen"/>\n'.format(c, x, y, color, color, c))
                     else:
                         templated_file.write(line)
                          
