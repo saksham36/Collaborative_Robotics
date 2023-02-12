@@ -41,6 +41,10 @@ $ sudo apt-get install python3-catkin-tools
 ```
 refer to this link for the [quickstart](https://catkin-tools.readthedocs.io/en/latest/quick_start.html) and the [cheat sheet](https://catkin-tools.readthedocs.io/en/latest/cheat_sheet.html): https://catkin-tools.readthedocs.io/en/latest/index.html 
 
+- Install PCL (Point Cloud Library) for ROS [pcl_ros](http://wiki.ros.org/pcl_ros).
+```
+$ sudo apt-get install ros-noetic-pcl-*
+```
 
 - To make file management easier for the package.xml and CMakeLists, this tutorial leverages the [helper code "catkin simple"](https://github.com/catkin/catkin_simple) when you make your package below you will import it into your workspace with `git clone https://github.com/catkin/catkin_simple.git`
 - Become familiar with Github [github tutorials](https://docs.github.com/en/get-started/quickstart/hello-world), (learn with bitbucket tutorial, same methods, great graphics: [bitbucket tutorial](https://www.atlassian.com/git/tutorials/learn-git-with-bitbucket-cloud))
@@ -390,14 +394,20 @@ $ ./launch_locobot_gazebo_moveit.sh
 ```
 this takes several seconds to load. In a separate terminal you are encouraged to open either `$ rosrun rqt_image_view rqt_image_view` (for single image inspection), or run `$ rqt`, then in the top menu select 'Plugins', then 'Visualization', then 'Image view' (do this twice). Then once you run the code below you will want to subscribe to the topics '/locobot/camera/color/image_raw' and '/locobot/camera/block_color_filt_img' in these windows.
 
-#### Step 2: Run the (python) service to find the pointcloud
-Run the service by doing the following in a new terminal: 
+#### Step 2: Run the C++ (or python) service to find the pointcloud
+Run the C++ service by doing the following in a new terminal: 
 ```
-rosrun me326_locobot_example matching_ptcld.py 
+$ rosrun me326_locobot_example matching_ptcld_serv
+```
+This initiates the service, now you can call the service in a new terminal with: `rosservice call /pix_to_point_cpp "{}"`. Be sure to observe the image '/locobot/camera/block_color_filt_img' through one of the *rqt* viewing options. This runs on a 16GB RAM with 12 cores faster than 5Hz (<0.2sec) with all other processing running concurrently.
+
+##### Depreciated Python Implementation (for reference):
+```
+$ rosrun me326_locobot_example matching_ptcld.py 
 ```
 This initiates the service, now you can call the service: `$ rosservice call /pix_to_point "{}"` in a new terminal. Be sure to observe the image '/locobot/camera/block_color_filt_img' through one of the *rqt* viewing options.
 
-Note, this is *very very slow (10sec)*, we are working on a C++ implementation of this example service that should be a lot faster. But if you use the python implementation, you will have to pause for about 10sec for it to perform an update on the masking of the image on an ordinary laptop.
+Note, this is *very very slow (10sec)*, for realtime use we recommend using the C++ implementation above. If you use this version you will have to pause for about 10sec for it to perform an update on the masking of the image on an ordinary laptop and subsequent steps...
 
 #### Step 3: Visualize in RViz
 Open the RViz window and hit the *Add* button above the Motion Planning section, this will then give you the option to *create a visualization* either 'By display type' or 'By topic'. Choose under 'By topic', then you will want to repeat this process twice for the following two topics: 
@@ -405,6 +415,45 @@ Open the RViz window and hit the *Add* button above the Motion Planning section,
 - /camera_cube_locator : Marker
 
 With these enabled, you can then navigate RViz to see the depth point cloud in 3D (note the cube colors are incorrect with this cloud - refer to gazebo and the camera image for correct color), and the marker is *close* to the desired point. To see the utility of this method further, you can pan the camera back and forth with the terminal input `rostopic pub /locobot/pan_controller/command std_msgs/Float64 "data: 0.5"` and `rostopic pub /locobot/pan_controller/command std_msgs/Float64 "data: 0.0"` (you will notice the significant delay for the python version of this serivce in '/locobot/camera/block_color_filt_img').
+
+
+## Example Moveit in Python
+The script `locobot_motion_example.py` provides examples of how to move the arm and camera of the locobot. It must be launched in the appropriate namespace which is why it can be run with the launch file: 
+```
+$ roslaunch me326_locobot_example gazebo_moveit_example.launch  
+```
+where it is placed in the namespace using the group: `<group ns="locobot"> ... </group>`.
+
+By default, this script is set to move the arm down so the camera can see the blocks: 
+```
+moveit_commander.roscpp_initialize(sys.argv)
+move_arm_obj = MoveLocobotArm(moveit_commander=moveit_commander)
+move_arm_obj.move_arm_down_for_camera()
+```
+
+Alternatively, to move the gripper, one could do the following: 
+```
+    moveit_commander.roscpp_initialize(sys.argv)
+    move_arm_obj = MoveLocobotArm(moveit_commander=moveit_commander)
+    move_arm_obj.move_gripper_down_to_grasp()
+```
+
+The camera is angled toward the ground with the following example class:
+```
+camera_orient_obj = OrientCamera()
+camera_orient_obj.tilt_camera(angle=0.5)
+rospy.spin()
+```
+the value of the angle can be changed as desired (note the `rospy.spin()` is necessary).
+
+## Steps towards running multiple robots
+On this page ([page link](https://docs.trossenrobotics.com/interbotix_xslocobots_docs/ros1_packages/locobot_descriptions.html)), Trossen provides the initial steps for running multiple robots at once
+```
+roslaunch interbotix_xslocobot_descriptions many_xslocobots.launch
+``` 
+The above allows you to visualize multiple Trossen robot types at once. 
+
+*It is left to the student to expand on their example, realizing that to implement this for gazebo, there must be one gazebo environment, but mutiple robots launch (and you can use [ROS Launch group namespaces](http://wiki.ros.org/roslaunch/Tutorials/Roslaunch%20tips%20for%20larger%20projects) to achieve this). Code for each robot can be run under its respective namespace*
 
 ## Final Group Project 
 In the final project, teams of students will have their robots work as a team with robots programmed by other teams and where no explicit (digital) communication is allowed in a resource gathering task
