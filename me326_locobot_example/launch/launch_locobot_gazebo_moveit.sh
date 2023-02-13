@@ -6,6 +6,7 @@ rosservice call /gazebo/unpause_physics
 
 sleep 5
 roslaunch me326_locobot_example random_cube_spawn.launch
+roslaunch me326_locobot_example apriltag_spawn.launch
 gnome-terminal -x roslaunch me326_locobot_example gazebo_moveit_example.launch 
 
 

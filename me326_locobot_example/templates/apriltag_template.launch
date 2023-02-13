@@ -1,0 +1,5 @@
+<?xml version="1.0" ?>
+<launch>
+    <env name="GAZEBO_MODEL_PATH" value="$(find me326_locobot_example)"/>
+    {{ADD_APRILTAGS}}
+</launch>
