@@ -2,9 +2,9 @@
 <launch>
     <env name="GAZEBO_MODEL_PATH" value="$(find me326_locobot_example)"/>
     <param name="Apriltag36_11_00000_model" textfile="$(find me326_locobot_example)/model/Apriltag36_11_00000/model.sdf"/>
-    <node name="spawn_Apriltag36_11_00000" pkg="gazebo_ros" type="spawn_model" args="-sdf -x 2.27091260745211 -y 2.7586885020237535 -z 0.1 -param Apriltag36_11_00000_model -model Apriltag36_11_00000" respawn="false" output="screen"/>
+    <node name="spawn_Apriltag36_11_00000" pkg="gazebo_ros" type="spawn_model" args="-sdf -x 2.0440360067050047 -y 4.47828728796057 -z 0.1 -param Apriltag36_11_00000_model -model Apriltag36_11_00000" respawn="false" output="screen"/>
     <param name="Apriltag36_11_00001_model" textfile="$(find me326_locobot_example)/model/Apriltag36_11_00001/model.sdf"/>
-    <node name="spawn_Apriltag36_11_00001" pkg="gazebo_ros" type="spawn_model" args="-sdf -x 2.613162480688153 -y 2.302933846201517 -z 0.1 -param Apriltag36_11_00001_model -model Apriltag36_11_00001" respawn="false" output="screen"/>
+    <node name="spawn_Apriltag36_11_00001" pkg="gazebo_ros" type="spawn_model" args="-sdf -x 3.559510786054616 -y 3.490000995355711 -z 0.1 -param Apriltag36_11_00001_model -model Apriltag36_11_00001" respawn="false" output="screen"/>
     <param name="Apriltag36_11_00002_model" textfile="$(find me326_locobot_example)/model/Apriltag36_11_00002/model.sdf"/>
-    <node name="spawn_Apriltag36_11_00002" pkg="gazebo_ros" type="spawn_model" args="-sdf -x 2.599440576781025 -y 2.12441949510538 -z 0.1 -param Apriltag36_11_00002_model -model Apriltag36_11_00002" respawn="false" output="screen"/>
+    <node name="spawn_Apriltag36_11_00002" pkg="gazebo_ros" type="spawn_model" args="-sdf -x 4.542819223655151 -y 3.2940753170377857 -z 0.1 -param Apriltag36_11_00002_model -model Apriltag36_11_00002" respawn="false" output="screen"/>
 </launch>
