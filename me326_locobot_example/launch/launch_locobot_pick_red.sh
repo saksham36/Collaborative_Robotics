@@ -7,7 +7,7 @@ rosservice call /gazebo/unpause_physics
 
 # Spawn new blocks
 sleep 5
-roslaunch me326_locobot_example spawn_cube.launch
+roslaunch me326_locobot_example random_cube_spawn.launch
 gnome-terminal -x roslaunch me326_locobot_example gazebo_moveit_example.launch 
 
 
@@ -22,3 +22,12 @@ gnome-terminal -x roslaunch me326_locobot_example optitrack_simulator.launch
 
 # Launch Locobot pick and place
 gnome-terminal -x roslaunch me326_locobot_example locobot_pick_red.launch
+
+
+# Launch apriltag spawn and detector
+mkdir -p ~/.gazebo/models/
+cp -R ~/me326_ws/src/collaborative_robotics_course/me326_locobot_example/model/Ap* ~/.gazebo/models/
+sleep 5
+roslaunch me326_locobot_example apriltag_spawn.launch
+roslaunch me326_locobot_example apriltag_detector.launch
+
