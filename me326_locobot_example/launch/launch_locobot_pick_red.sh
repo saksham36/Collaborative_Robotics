@@ -12,8 +12,8 @@ gnome-terminal -x roslaunch me326_locobot_example gazebo_moveit_example.launch
 
 
 # Launch point cloud
-#sleep 5
-#gnome-terminal -x rosrun me326_locobot_example matching_ptcld_serv
+sleep 5
+gnome-terminal -x rosrun me326_locobot_example matching_ptcld_serv
 
 
 # Launch Mocap Simulator
