@@ -16,6 +16,7 @@ to matrix functionatliy when needed (similar to python numpy).
 #include <iostream>
 #include <string>
 #include <vector>
+#include <mutex>
 #include <map> //dictionary equivalent
 #include<std_msgs/Header.h>
 
@@ -82,6 +83,7 @@ public:
 	//Variables
 	std::vector<geometry_msgs::Point> point_3d_cloud_; //Point in pointcloud corresponding to desired pixel
 	std::vector<std_msgs::ColorRGBA> point_color; // Point color
+	std::vector<std_msgs::ColorRGBA> marker_color;
 	std_msgs::Header header_;
 	std::vector<geometry_msgs::Point> uv_pix_; //pixel index
 	std::string color_image_topic_; // this string is over-written by the service request
@@ -91,6 +93,9 @@ public:
 	image_geometry::PinholeCameraModel camera_model_; //Camera model, will help us with projecting the ray through the depth image
 	bool depth_cam_info_ready_; //This will help us ensure we don't ask for a variable before its ready
 	bool point_3d_ready_;
+	bool p2d;
+	bool p3d;
+	std::mutex mtx_2d, mtx_3d;
 	// TF Listener
 	tf2_ros::Buffer tf_buffer_;
 	std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -118,12 +123,15 @@ Matching_Pix_to_Ptcld::Matching_Pix_to_Ptcld()
 	rgb_image_sub_ = nh.subscribe(color_image_topic_,1,&Matching_Pix_to_Ptcld::color_image_callback,this);
 	depth_cam_info_ready_ = false; //set this to false so that depth doesn't ask for camera_model_ until its been set
 	point_3d_ready_ = false;
+	p2d = true;
+	p3d = false;
 	//Service
 	service_ = nh.advertiseService("pix_to_point_cpp", &Matching_Pix_to_Ptcld::service_callback, this);
 }
 
 void Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen(){
 	if (point_3d_ready_) {
+		
 		if (point_3d_cloud_.size() < 1) return;
 		visualization_msgs::Marker marker;
 		//marker.header.frame_id = point_3d_cloud_.header.frame_id;
@@ -135,15 +143,24 @@ void Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen(){
 		marker.scale.x = 0.1;  //radius of the sphere
 		marker.scale.y = 0.1;
 		marker.scale.z = 0.1;
-		
 		for (int ii = 0; ii < point_3d_cloud_.size(); ++ii){
 			marker.points.push_back(point_3d_cloud_[ii]);
-			marker.colors.push_back(point_color[ii]);
+			marker.colors.push_back(marker_color[ii]);
 			ROS_DEBUG("xyz %f %f %f", point_3d_cloud_[ii], point_3d_cloud_[ii], point_3d_cloud_[ii]);
-			ROS_DEBUG("color %f %f %f %f", point_color[ii].r, point_color[ii].g, point_color[ii].b,point_color[ii].a);
+			ROS_DEBUG("color %f %f %f %f", marker_color[ii].r, marker_color[ii].g, marker_color[ii].b,marker_color[ii].a);
 		}
 		camera_cube_locator_marker_.publish(marker);
+		point_3d_cloud_.clear();
+		point_color.clear();
+		marker_color.clear();
+		uv_pix_.clear();
+		
+		//mtx_2d.lock();
+		p2d = true;
+		ROS_DEBUG("changing 2d %d", p2d);
+		//mtx_2d.unlock();
 	}
+	point_3d_ready_ = false;
 }
 
 void Matching_Pix_to_Ptcld::info_callback(const sensor_msgs::CameraInfo::ConstPtr& msg){
@@ -164,8 +181,15 @@ void Matching_Pix_to_Ptcld::depth_callback(const sensor_msgs::Image::ConstPtr& m
     ROS_ERROR("cv_bridge exception: %s", e.what());
     return;
   }
+  if (p3d == false) return;
+  //mtx_3d.lock();
+  p3d = false;
+  ROS_DEBUG("changing p3d %d", p3d);
+  //mtx_3d.unlock();
   //Access the pixel of interest
-  for (geometry_msgs::Point p_aux : uv_pix_) {
+  header_.frame_id = msg->header.frame_id;
+  for (int jj = 0; jj < uv_pix_.size(); jj++) {
+  	geometry_msgs::Point p_aux = uv_pix_[jj];
 	  cv::Mat depth_image = cv_ptr->image;
 	  //float depth_value = depth_image.at<float>(uv_pix_.x,uv_pix_.y);  // access the depth value of the desired pixel
 	  float depth_value = depth_image.at<float>(p_aux.x,p_aux.y);
@@ -188,10 +212,14 @@ void Matching_Pix_to_Ptcld::depth_callback(const sensor_msgs::Image::ConstPtr& m
 				//geometry_msgs::PointStamped point_3d_geom_msg;
 				geometry_msgs::Point point_3d_geom_msg; 
 				//point_3d_geom_msg.header = msg->header;
-				header_.frame_id = msg->header.frame_id;
 				point_3d_geom_msg.x = point_3d.x;
 				point_3d_geom_msg.y = point_3d.y;
 				point_3d_geom_msg.z = point_3d.z;
+				
+				if (point_3d.x != point_3d.x) continue;
+				
+				ROS_DEBUG("in xy %f %f, aux out %f %f %f", p_aux.x, p_aux.y, point_3d.x, point_3d.y, point_3d.z);
+				
 				//Transform the point to the pointcloud frame using tf
 				std::string point_cloud_frame = camera_model_.tfFrame();
 				// Get the camera pose in the desired reference frame
@@ -206,11 +234,18 @@ void Matching_Pix_to_Ptcld::depth_callback(const sensor_msgs::Image::ConstPtr& m
 				geometry_msgs::Point point_3d_aux;
 				//tf2::doTransform(point_3d_geom_msg, point_3d_cloud_, transform); // syntax: (points_in, points_out, transform)
 				tf2::doTransform(point_3d_geom_msg, point_3d_aux, transform); // syntax: (points_in, points_out, transform)
+				ROS_DEBUG("in xy %f %f, out %f %f %f", p_aux.x, p_aux.y, point_3d_aux.x, point_3d_aux.y, point_3d_aux.z);
+				if (point_3d_aux.x != point_3d_aux.x) continue;
 				point_3d_cloud_.push_back(point_3d_aux);
+				marker_color.push_back(point_color[jj]);
+			} else{
+				p3d = true;
 			}
 		}
 	}
 	point_3d_ready_ = true;
+	//Now show the cube location spherical marker:
+	Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen();
 }
 
 void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::ConstPtr& msg){
@@ -225,6 +260,13 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
 	  ROS_ERROR("cv_bridge exception: %s", e.what());
 	  return;
 	}
+	
+	ROS_DEBUG("2d %d", p2d);
+	if (p2d == false) return;
+	//mtx_2d.lock();
+	p2d = false;
+	ROS_DEBUG("changing p2d %d", p2d);
+	//mtx_2d.unlock();
 	
 	//Convert the color image to HSV
 	cv::Mat hsv_img;
@@ -305,6 +347,7 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
 			pc.r = 1.0; pc.g = 1.0; pc.b = 0.0;
 		}
 		
+		
 		point_color.push_back(pc);
 		ROS_DEBUG(" color %f %f %f %f", pc.r, pc.g, pc.b, pc.a);
 		
@@ -340,8 +383,10 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
 		cv_bridge_mask_image.toImageMsg(ros_mask_image);
 		image_color_filt_pub_.publish(ros_mask_image);*/
 	}
-	//Now show the cube location spherical marker:
-	Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen();
+	//mtx_3d.lock();
+	p3d = true;
+	ROS_DEBUG("changed 3d %d", p3d);
+	//mtx_3d.unlock();
 	
 }
 
