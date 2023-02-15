@@ -63,6 +63,12 @@ class MoveLocobotArm(object):
 		# We can get a list of all the groups in the robot:
 		self.group_names = self.robot.get_group_names()
 
+	def red_cube_callback(self, data):
+        # rospy.loginfo(rospy.get_caller_id() + " I heard %s", data)
+        # print(20*"*")
+		self.target_pose = data.pose
+		self.target_pose_publisher.publish(self.target_pose)
+		self.pub_target_point_marker()
 
 	def display_moveit_info(self):
 		# We can get the name of the reference frame for this robot:
@@ -119,46 +125,50 @@ class MoveLocobotArm(object):
 		pose_goal.orientation.z = v.item(2)*np.sin(th/2)
 		pose_goal.orientation.w = np.cos(th/2)
 
-		red_cube_sub = rospy.Subscriber("/optitrack/red_cube/pose", PoseStamped, self.target_pose_callback)
+		try:
 
-		listener = TransformListener()
-		listener.waitForTransform("/odom", "/arm_base", rospy.Time(0),rospy.Duration(4.0))
-        # laser_point=PointStamped()
-        # laser_point.header.frame_id = "odom"
-        # laser_point.header.stamp =rospy.Time(0)
-        # laser_point.point.x=1.0
-        # laser_point.point.y=1.0
-        # laser_point.point.z=0.0
-		red_cube_pnt=PointStamped()
-                
-		red_cube_pnt.header.frame_id = "odom"
-		red_cube_pnt.header.stamp =rospy.Time(0)
-		red_cube_pnt.point.x=red_cube_sub.point.x
-		red_cube_pnt.point.y=red_cube_sub.point.y
-		red_cube_pnt.point.z=red_cube_sub.point.z
-                
-		test_pnt=PointStamped()
-                
-		test_pnt.header.frame_id = "odom"
-		test_pnt.header.stamp =rospy.Time(0)
-		test_pnt.point.x=0.5
-		test_pnt.point.y=0
-		test_pnt.point.z=red_cube_sub.point.z
+			red_cube_sub = rospy.Subscriber("/optitrack/red_cube/pose", PoseStamped, self.target_pose_callback)
 
-		pos_in_arm=listener.transformPoint("arm_base",test_pnt)
+			listener = TransformListener()
+			listener.waitForTransform("/odom", "/arm_base", rospy.Time(0),rospy.Duration(4.0))
+        	# laser_point=PointStamped()
+        	# laser_point.header.frame_id = "odom"
+        	# laser_point.header.stamp =rospy.Time(0)
+        	# laser_point.point.x=1.0
+        	# laser_point.point.y=1.0
+        	# laser_point.point.z=0.0
+			red_cube_pnt=PointStamped()
                 
-		print(test_pnt)
-		print(pos_in_arm)
+			red_cube_pnt.header.frame_id = "odom"
+			red_cube_pnt.header.stamp =rospy.Time(0)
+			red_cube_pnt.point.x=red_cube_sub.point.x
+			red_cube_pnt.point.y=red_cube_sub.point.y
+			red_cube_pnt.point.z=red_cube_sub.point.z
+                
+			test_pnt=PointStamped()
+                
+			test_pnt.header.frame_id = "odom"
+			test_pnt.header.stamp =rospy.Time(0)
+			test_pnt.point.x=0.5
+			test_pnt.point.y=0
+			test_pnt.point.z=red_cube_sub.point.z
+
+			pos_in_arm=listener.transformPoint("arm_base",test_pnt)
+                
+			print(test_pnt)
+			print(pos_in_arm)
         
-		pose_goal.position.x = pos_in_arm.x
-		pose_goal.position.y = pos_in_arm.y
-		pose_goal.position.z = 0.03 
+			pose_goal.position.x = pos_in_arm.x
+			pose_goal.position.y = pos_in_arm.y
+			pose_goal.position.z = 0.03 
                 
-		print(pose_goal)
+			print(pose_goal)
+		except Exception as e:
+			print("Error: ", e)
+			pose_goal.position.x = 0.5
+			pose_goal.position.y = 0.0
+			pose_goal.position.z = 0.03
 
-		pose_goal.position.x = 0.5
-		pose_goal.position.y = 0.0
-		pose_goal.position.z = 0.03
 
 		self.arm_move_group.set_pose_target(pose_goal)
 		# now we call the planner to compute and execute the plan
@@ -378,7 +388,7 @@ def main():
     rospy.loginfo("Move Gripper down to grasp")
     move_arm_obj.move_gripper_down_to_grasp()
 
-    rospy.spin()
+    #rospy.spin()
 
 if __name__ == '__main__':
     #this is where the script begins, calls the main function
