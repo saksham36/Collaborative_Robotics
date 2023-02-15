@@ -16,7 +16,8 @@ to matrix functionatliy when needed (similar to python numpy).
 #include <iostream>
 #include <string>
 #include <vector>
-#include <mutex>
+#include <numeric>
+
 #include <map> //dictionary equivalent
 #include<std_msgs/Header.h>
 
@@ -95,7 +96,6 @@ public:
 	bool point_3d_ready_;
 	bool p2d;
 	bool p3d;
-	std::mutex mtx_2d, mtx_3d;
 	// TF Listener
 	tf2_ros::Buffer tf_buffer_;
 	std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -131,35 +131,38 @@ Matching_Pix_to_Ptcld::Matching_Pix_to_Ptcld()
 
 void Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen(){
 	if (point_3d_ready_) {
+		ROS_DEBUG("size %d", point_3d_cloud_.size());
 		
-		if (point_3d_cloud_.size() < 1) return;
-		visualization_msgs::Marker marker;
-		//marker.header.frame_id = point_3d_cloud_.header.frame_id;
-		marker.header.frame_id = header_.frame_id;
-		marker.header.stamp = ros::Time::now();
-		marker.type = visualization_msgs::Marker::POINTS;
-		marker.action = visualization_msgs::Marker::ADD;
-		// Set the marker scale
-		marker.scale.x = 0.1;  //radius of the sphere
-		marker.scale.y = 0.1;
-		marker.scale.z = 0.1;
-		for (int ii = 0; ii < point_3d_cloud_.size(); ++ii){
-			marker.points.push_back(point_3d_cloud_[ii]);
-			marker.colors.push_back(marker_color[ii]);
-			ROS_DEBUG("xyz %f %f %f", point_3d_cloud_[ii], point_3d_cloud_[ii], point_3d_cloud_[ii]);
-			ROS_DEBUG("color %f %f %f %f", marker_color[ii].r, marker_color[ii].g, marker_color[ii].b,marker_color[ii].a);
+		if (point_3d_cloud_.size() > 0){
+			visualization_msgs::Marker marker;
+			//marker.header.frame_id = point_3d_cloud_.header.frame_id;
+			marker.header.frame_id = header_.frame_id;
+			marker.header.stamp = ros::Time::now();
+			marker.type = visualization_msgs::Marker::POINTS;
+			marker.action = visualization_msgs::Marker::ADD;
+			// Set the marker scale
+			marker.scale.x = 0.1;  //radius of the sphere
+			marker.scale.y = 0.1;
+			marker.scale.z = 0.1;
+			for (int ii = 0; ii < point_3d_cloud_.size(); ++ii){
+				marker.points.push_back(point_3d_cloud_[ii]);
+				marker.colors.push_back(marker_color[ii]);
+				ROS_DEBUG("xyz %f %f %f", point_3d_cloud_[ii], point_3d_cloud_[ii], point_3d_cloud_[ii]);
+				ROS_DEBUG("color %f %f %f %f", marker_color[ii].r, marker_color[ii].g, marker_color[ii].b,marker_color[ii].a);
+			}
+			camera_cube_locator_marker_.publish(marker);
 		}
-		camera_cube_locator_marker_.publish(marker);
-		point_3d_cloud_.clear();
-		point_color.clear();
-		marker_color.clear();
-		uv_pix_.clear();
 		
-		//mtx_2d.lock();
-		p2d = true;
-		ROS_DEBUG("changing 2d %d", p2d);
-		//mtx_2d.unlock();
 	}
+	point_3d_cloud_.clear();
+	point_color.clear();
+	marker_color.clear();
+	uv_pix_.clear();
+	
+	//mtx_2d.lock();
+	p2d = true;
+	ROS_DEBUG("changing 2d %d", p2d);
+	//mtx_2d.unlock();
 	point_3d_ready_ = false;
 }
 
@@ -216,6 +219,8 @@ void Matching_Pix_to_Ptcld::depth_callback(const sensor_msgs::Image::ConstPtr& m
 				point_3d_geom_msg.y = point_3d.y;
 				point_3d_geom_msg.z = point_3d.z;
 				
+				ROS_DEBUG("%f %f %f %f %f",p_aux.x, p_aux.y, point_3d.x, point_3d.y, point_3d.z);
+				
 				if (point_3d.x != point_3d.x) continue;
 				
 				ROS_DEBUG("in xy %f %f, aux out %f %f %f", p_aux.x, p_aux.y, point_3d.x, point_3d.y, point_3d.z);
@@ -243,6 +248,7 @@ void Matching_Pix_to_Ptcld::depth_callback(const sensor_msgs::Image::ConstPtr& m
 			}
 		}
 	}
+	ROS_DEBUG("calling marker");
 	point_3d_ready_ = true;
 	//Now show the cube location spherical marker:
 	Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen();
@@ -293,7 +299,7 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
     for (int i = 0; i < contours.size(); i++) {
     	ROS_DEBUG("area: %f",cv::contourArea(contours[i]));
     	int area = cv::contourArea(contours[i]);
-	if (area > 50 && area < 250) {
+	if (area > 5 && area < 350) {
 	    contours_filtered.push_back(contours[i]);
 	}
     }
@@ -319,10 +325,7 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
 	for (int i = 0; i < contours_mean_color.size(); i++) {
 		std::vector<float> distance;
 		cv::Vec3b color = contours_mean_color[i];
-		ROS_DEBUG("color");
-		for (int j = 0; j < 3; j++) {
-			ROS_DEBUG("color %d", color[j]);
-		}
+		
 		// 0 Red
 		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1], color[2]) - cv::Vec3f(0, 220, 100)));
 		// 1 Green
@@ -330,9 +333,16 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
 		// 2 Blue
 		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1], color[2]) - cv::Vec3f(110, 220, 100)));
 		// 3 Yellow
-		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1], color[2]) - cv::Vec3f(25, 220, 150)));
+		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1], color[2]) - cv::Vec3f(30, 220, 150)));
+		
+		float average = std::accumulate( distance.begin(), distance.end(), 0.0)/distance.size();
+		ROS_DEBUG("average %f", average);
+		if (average > 150) continue;
 
 		// Countour color
+		for (int jj = 0; jj < distance.size(); jj++){
+			ROS_DEBUG("d %d %f", jj, distance[jj]);
+		}
 		int idx = std::min_element(distance.begin(), distance.end()) - distance.begin();
 		std_msgs::ColorRGBA pc;
 		pc.a = 1.0;
@@ -350,38 +360,34 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
 		
 		point_color.push_back(pc);
 		ROS_DEBUG(" color %f %f %f %f", pc.r, pc.g, pc.b, pc.a);
-		
-		//point_color[0] = color[0];
-		//point_color[1] = color[1];
-		//point_color[2] = color[2];
 
 		// Contour center
-		cv::Moments M = cv::moments(contours_filtered[i]);
+		cv::Moments M = cv::moments(contours_filtered[i], true);
 		cv::Point center(M.m10/M.m00, M.m01/M.m00);
+		center.x = (int) center.x;
+		center.y = (int) center.y;
   
 		cv::Mat mask_img;
 		bitwise_and(color_img_ptr->image, color_img_ptr->image, mask_img, contour_masks[i]);
 		
 		// Turn the average pixel location white; Make the center point pixel bright so it shows up in this image
-		mask_img.at<cv::Vec3b>(center.x, center.y) = cv::Vec3b(255, 255, 255);
-		//Store this in global variable:
-		geometry_msgs::Point p_aux;
-		p_aux.x = center.x;
-		p_aux.y = center.y;
-		uv_pix_.push_back(p_aux);  
-		//uv_pix_.x = center.x; 
-		//uv_pix_.y = center.y;
+		mask_img.at<cv::Vec3b>(center.y, center.x) = cv::Vec3b(255, 255, 255);
 
+		geometry_msgs::Point p_aux;
+		p_aux.x = center.y;
+		p_aux.y = center.x;
+		uv_pix_.push_back(p_aux);
 
 		//Publish the image (color img with mask applied)
-		/*cv_bridge::CvImage cv_bridge_mask_image;
+		cv_bridge::CvImage cv_bridge_mask_image;
 		cv_bridge_mask_image.header.stamp = ros::Time::now();
 		cv_bridge_mask_image.header.frame_id = msg->header.frame_id;
 		cv_bridge_mask_image.encoding = sensor_msgs::image_encodings::RGB8;//::MONO8;
 		cv_bridge_mask_image.image = mask_img;
 		sensor_msgs::Image ros_mask_image; //now convert from cv::Mat image back to ROS sensor_msgs image
 		cv_bridge_mask_image.toImageMsg(ros_mask_image);
-		image_color_filt_pub_.publish(ros_mask_image);*/
+		image_color_filt_pub_.publish(ros_mask_image);
+		break;
 	}
 	//mtx_3d.lock();
 	p3d = true;
