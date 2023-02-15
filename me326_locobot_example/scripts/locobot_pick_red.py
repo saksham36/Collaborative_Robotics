@@ -253,7 +253,8 @@ class LocobotMoveAndTrack(object):
         self.pub_point_P_marker()
 
         if self.target_pose is None:
-            rospy.loginfo("Target Pose has not been received")
+            #rospy.loginfo("Target Pose has not been received")
+            pass
         else:
             rospy.loginfo("Target Pose: %s", self.target_pose)
             # Step 2: Calculate the error between the target pose for position control (this will relate to the proportoinal gain matrix, the P in PID control)

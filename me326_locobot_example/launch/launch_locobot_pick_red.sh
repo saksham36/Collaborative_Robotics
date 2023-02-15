@@ -12,22 +12,22 @@ gnome-terminal -x roslaunch me326_locobot_example gazebo_moveit_example.launch
 
 
 # Launch point cloud
-sleep 5
-gnome-terminal -x rosrun me326_locobot_example matching_ptcld_serv
+#sleep 5
+#gnome-terminal -x rosrun me326_locobot_example matching_ptcld_serv
 
 
 # Launch Mocap Simulator
-sleep 5
-gnome-terminal -x roslaunch me326_locobot_example optitrack_simulator.launch
+#sleep 5
+#gnome-terminal -x roslaunch me326_locobot_example optitrack_simulator.launch
 
 # Launch Locobot pick and place
-gnome-terminal -x roslaunch me326_locobot_example locobot_pick_red.launch
+#gnome-terminal -x roslaunch me326_locobot_example locobot_pick_red.launch
 
 
 # Launch apriltag spawn and detector
-mkdir -p ~/.gazebo/models/
-cp -R ~/me326_ws/src/collaborative_robotics_course/me326_locobot_example/model/Ap* ~/.gazebo/models/
-sleep 5
-roslaunch me326_locobot_example apriltag_spawn.launch
-roslaunch me326_locobot_example apriltag_detector.launch
+#mkdir -p ~/.gazebo/models/
+#cp -R ~/me326_ws/src/collaborative_robotics_course/me326_locobot_example/model/Ap* ~/.gazebo/models/
+#sleep 5
+#roslaunch me326_locobot_example apriltag_spawn.launch
+#roslaunch me326_locobot_example apriltag_detector.launch
 
