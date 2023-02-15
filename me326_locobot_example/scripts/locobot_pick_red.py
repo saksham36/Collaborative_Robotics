@@ -11,7 +11,7 @@ from scipy import linalg
 import geometry_msgs
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Twist
-from geometry_msgs.msg import Point, PoseStamped
+from geometry_msgs.msg import Point, PoseStamped, PointStamped
 from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker
 
@@ -21,6 +21,8 @@ import geometry_msgs.msg
 from moveit_commander.conversions import pose_to_list
 
 from std_msgs.msg import Float64
+
+from tf import TransformListener
 
 class OrientCamera(object):
 	"""docstring for OrientCamera"""
@@ -106,11 +108,7 @@ class MoveLocobotArm(object):
 		self.arm_move_group.go(joint_goal, wait=True)	
 
 	def move_gripper_down_to_grasp(self):
-		pose_goal = geometry_msgs.msg.Pose()
-
-		pose_goal.position.x = 0.5
-		pose_goal.position.y = 0.0
-		pose_goal.position.z = 0.03
+		pose_goal = geometry_msgs.msg.Pose()               
 
 		v = np.matrix([0,1,0]) #pitch about y-axis
 		th = 10*np.pi/180. #pitch by 45deg
@@ -120,6 +118,47 @@ class MoveLocobotArm(object):
 		pose_goal.orientation.y = v.item(1)*np.sin(th/2)
 		pose_goal.orientation.z = v.item(2)*np.sin(th/2)
 		pose_goal.orientation.w = np.cos(th/2)
+
+		red_cube_sub = rospy.Subscriber("/optitrack/red_cube/pose", PoseStamped, self.target_pose_callback)
+
+		listener = TransformListener()
+		listener.waitForTransform("/odom", "/arm_base", rospy.Time(0),rospy.Duration(4.0))
+        # laser_point=PointStamped()
+        # laser_point.header.frame_id = "odom"
+        # laser_point.header.stamp =rospy.Time(0)
+        # laser_point.point.x=1.0
+        # laser_point.point.y=1.0
+        # laser_point.point.z=0.0
+		red_cube_pnt=PointStamped()
+                
+		red_cube_pnt.header.frame_id = "odom"
+		red_cube_pnt.header.stamp =rospy.Time(0)
+		red_cube_pnt.point.x=red_cube_sub.point.x
+		red_cube_pnt.point.y=red_cube_sub.point.y
+		red_cube_pnt.point.z=red_cube_sub.point.z
+                
+		test_pnt=PointStamped()
+                
+		test_pnt.header.frame_id = "odom"
+		test_pnt.header.stamp =rospy.Time(0)
+		test_pnt.point.x=0.5
+		test_pnt.point.y=0
+		test_pnt.point.z=red_cube_sub.point.z
+
+		pos_in_arm=listener.transformPoint("arm_base",test_pnt)
+                
+		print(test_pnt)
+		print(pos_in_arm)
+        
+		pose_goal.position.x = pos_in_arm.x
+		pose_goal.position.y = pos_in_arm.y
+		pose_goal.position.z = 0.03 
+                
+		print(pose_goal)
+
+		pose_goal.position.x = 0.5
+		pose_goal.position.y = 0.0
+		pose_goal.position.z = 0.03
 
 		self.arm_move_group.set_pose_target(pose_goal)
 		# now we call the planner to compute and execute the plan
@@ -312,7 +351,7 @@ class LocobotMoveAndTrack(object):
             #Step 2: Subscribe to pose of the base, and use 'Point P control' (point right in front of the non-holonomic base's line) to move to the position, then orient to the target orinetation once the position is reached
 
             mobile_base_sub = rospy.Subscriber("/locobot/mobile_base/odom", Odometry, self.mobile_base_callback) #this says: listen to the odom message, of type odometry, and send that to the callback function specified
-            # rospy.spin() #This is ros python's way of 'always listening' for the subscriber messages, and when it 
+            rospy.spin() #This is ros python's way of 'always listening' for the subscriber messages, and when it 
         # else:
         #     red_cube_sub.shutdown()
         #     mobile_base_sub.shutdown()
@@ -333,13 +372,57 @@ def main():
     rospy.loginfo("Move arm down for the camera")
     move_arm_obj.move_arm_down_for_camera()
     
-    rospy.loginfo("Moving to goal")
-    track_obj.go_to_pose()
+    # rospy.loginfo("Moving to goal")
+    # track_obj.go_to_pose()
     
     rospy.loginfo("Move Gripper down to grasp")
     move_arm_obj.move_gripper_down_to_grasp()
+
+    rospy.spin()
 
 if __name__ == '__main__':
     #this is where the script begins, calls the main function
     main()
 
+		# try:
+
+		# 	red_cube_sub = rospy.Subscriber("/optitrack/red_cube/pose", PoseStamped, self.target_pose_callback)
+
+		# 	listener = TransformListener()
+		# 	listener.waitForTransform("/odom", "/arm_base", rospy.Time(0),rospy.Duration(4.0))
+        # 	# laser_point=PointStamped()
+        # 	# laser_point.header.frame_id = "odom"
+        # 	# laser_point.header.stamp =rospy.Time(0)
+        # 	# laser_point.point.x=1.0
+        # 	# laser_point.point.y=1.0
+        # 	# laser_point.point.z=0.0
+		# 	red_cube_pnt=PointStamped()
+                
+		# 	red_cube_pnt.header.frame_id = "odom"
+		# 	red_cube_pnt.header.stamp =rospy.Time(0)
+		# 	red_cube_pnt.point.x=red_cube_sub.point.x
+		# 	red_cube_pnt.point.y=red_cube_sub.point.y
+		# 	red_cube_pnt.point.z=red_cube_sub.point.z
+                
+		# 	test_pnt=PointStamped()
+                
+		# 	test_pnt.header.frame_id = "odom"
+		# 	test_pnt.header.stamp =rospy.Time(0)
+		# 	test_pnt.point.x=0.5
+		# 	test_pnt.point.y=0
+		# 	test_pnt.point.z=red_cube_sub.point.z
+
+		# 	pos_in_arm=listener.transformPoint("arm_base",test_pnt)
+                
+		# 	print(test_pnt)
+		# 	print(pos_in_arm)
+        
+		# 	pose_goal.position.x = pos_in_arm.x
+		# 	pose_goal.position.y = pos_in_arm.y
+		# 	pose_goal.position.z = 0.03 
+                
+		# 	print(pose_goal)
+		# except:
+		# 	pose_goal.position.x = 0.5
+		# 	pose_goal.position.y = 0.0
+		# 	pose_goal.position.z = 0.03
