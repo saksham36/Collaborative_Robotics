@@ -132,9 +132,8 @@ Matching_Pix_to_Ptcld::Matching_Pix_to_Ptcld()
 void Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen(){
 	if (point_3d_ready_) {
 		ROS_DEBUG("size %d", point_3d_cloud_.size());
-		
+		visualization_msgs::Marker marker;
 		if (point_3d_cloud_.size() > 0){
-			visualization_msgs::Marker marker;
 			//marker.header.frame_id = point_3d_cloud_.header.frame_id;
 			marker.header.frame_id = header_.frame_id;
 			marker.header.stamp = ros::Time::now();
@@ -152,6 +151,7 @@ void Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen(){
 			}
 			camera_cube_locator_marker_.publish(marker);
 		}
+		
 		
 	}
 	point_3d_cloud_.clear();
@@ -299,7 +299,7 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
     for (int i = 0; i < contours.size(); i++) {
     	ROS_DEBUG("area: %f",cv::contourArea(contours[i]));
     	int area = cv::contourArea(contours[i]);
-	if (area > 5 && area < 350) {
+	if (area > 5 && area < 1000) {
 	    contours_filtered.push_back(contours[i]);
 	}
     }
@@ -322,22 +322,26 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
     }
 
     // Get distance to desired color. We give more weight to hue, than saturation and value
-	for (int i = 0; i < contours_mean_color.size(); i++) {
+	for (int i = 1; i < contours_mean_color.size(); i++) {
 		std::vector<float> distance;
 		cv::Vec3b color = contours_mean_color[i];
 		
 		// 0 Red
-		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1], color[2]) - cv::Vec3f(0, 220, 100)));
+		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1]*0.4, color[2]*0.4) - cv::Vec3f(0, 200*0.4, 120*0.4)));
 		// 1 Green
-		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1], color[2]) - cv::Vec3f(50, 220, 100)));
+		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1]*0.4, color[2]*0.4) - cv::Vec3f(50, 200*0.4, 120*0.4)));
 		// 2 Blue
-		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1], color[2]) - cv::Vec3f(110, 220, 100)));
+		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1]*0.4, color[2]*0.4) - cv::Vec3f(110, 200*0.4, 120*0.4)));
 		// 3 Yellow
-		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1], color[2]) - cv::Vec3f(30, 220, 150)));
+		distance.push_back(cv::norm(cv::Vec3f(color[0], color[1]*0.4, color[2]*0.4) - cv::Vec3f(25, 200*0.4, 150*0.4)));
+		for (int ii = 0; ii < distance.size(); ii++){
+			ROS_DEBUG("dist %d %f", ii, distance[ii]);
+		}
 		
-		float average = std::accumulate( distance.begin(), distance.end(), 0.0)/distance.size();
-		ROS_DEBUG("average %f", average);
-		if (average > 150) continue;
+		cv::Scalar mean, stddev;
+		cv::meanStdDev(distance, mean, stddev);
+		ROS_DEBUG("mean std %f %f", mean[0], stddev[0]);
+		if (stddev[0] < 20) continue;
 
 		// Countour color
 		for (int jj = 0; jj < distance.size(); jj++){
@@ -379,15 +383,15 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
 		uv_pix_.push_back(p_aux);
 
 		//Publish the image (color img with mask applied)
-		cv_bridge::CvImage cv_bridge_mask_image;
+		/*cv_bridge::CvImage cv_bridge_mask_image;
 		cv_bridge_mask_image.header.stamp = ros::Time::now();
 		cv_bridge_mask_image.header.frame_id = msg->header.frame_id;
 		cv_bridge_mask_image.encoding = sensor_msgs::image_encodings::RGB8;//::MONO8;
 		cv_bridge_mask_image.image = mask_img;
 		sensor_msgs::Image ros_mask_image; //now convert from cv::Mat image back to ROS sensor_msgs image
 		cv_bridge_mask_image.toImageMsg(ros_mask_image);
-		image_color_filt_pub_.publish(ros_mask_image);
-		break;
+		image_color_filt_pub_.publish(ros_mask_image);*/
+		//break;
 	}
 	//mtx_3d.lock();
 	p3d = true;
