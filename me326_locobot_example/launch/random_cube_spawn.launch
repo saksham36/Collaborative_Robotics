@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+<launch>
+    <param name="yellow_cube_model" textfile="$(find me326_locobot_example)/model/yellow_cube.urdf"/>
+    <param name="blue_cube_model" textfile="$(find me326_locobot_example)/model/blue_cube.urdf"/>
+    <param name="green_cube_model" textfile="$(find me326_locobot_example)/model/green_cube.urdf"/>
+    <param name="red_cube_model" textfile="$(find me326_locobot_example)/model/red_cube.urdf"/>
+    <node name="spawn_0_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 1.1902922509590625 -y 1.2474329119830765 -z 0.1 -param red_cube_model -model red_cube_0" respawn="false" output="screen"/>
+    <node name="spawn_1_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.17050225265676416 -y 0.2906500424871436 -z 0.1 -param blue_cube_model -model blue_cube_1" respawn="false" output="screen"/>
+    <node name="spawn_2_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 1.6081114132801706 -y 0.38326868029171823 -z 0.1 -param yellow_cube_model -model yellow_cube_2" respawn="false" output="screen"/>
+    <node name="spawn_3_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 1.24604480312982 -y 1.0940011446227302 -z 0.1 -param yellow_cube_model -model yellow_cube_3" respawn="false" output="screen"/>
+    <node name="spawn_4_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.25885624342830227 -y 1.2453935278758326 -z 0.1 -param yellow_cube_model -model yellow_cube_4" respawn="false" output="screen"/>
+    <node name="spawn_5_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.9710782931095427 -y 1.5110276958087574 -z 0.1 -param red_cube_model -model red_cube_5" respawn="false" output="screen"/>
+    <node name="spawn_6_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 1.384472757282218 -y 0.830800463762724 -z 0.1 -param red_cube_model -model red_cube_6" respawn="false" output="screen"/>
+    <node name="spawn_7_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.9139091915574131 -y 0.03611589071230242 -z 0.1 -param blue_cube_model -model blue_cube_7" respawn="false" output="screen"/>
+    <node name="spawn_8_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.6495462338043025 -y 0.8277026164308642 -z 0.1 -param red_cube_model -model red_cube_8" respawn="false" output="screen"/>
+    <node name="spawn_9_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.7783811284968724 -y 0.6365743499477426 -z 0.1 -param green_cube_model -model green_cube_9" respawn="false" output="screen"/>
+</launch>
