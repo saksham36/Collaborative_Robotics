@@ -8,8 +8,6 @@ rosservice call /gazebo/unpause_physics
 # Spawn new blocks
 sleep 5
 roslaunch me326_locobot_example random_cube_spawn.launch
-gnome-terminal -x roslaunch me326_locobot_example gazebo_moveit_example.launch 
-
 
 # Launch point cloud
 sleep 5
@@ -17,9 +15,11 @@ gnome-terminal -x rosrun me326_locobot_example matching_ptcld_serv
 
 
 # Launch Mocap Simulator
-#sleep 5
-#gnome-terminal -x roslaunch me326_locobot_example optitrack_simulator.launch
+sleep 5
+gnome-terminal -x roslaunch me326_locobot_example optitrack_simulator.launch
 
+# Code file
+gnome-terminal -x roslaunch me326_locobot_example gazebo_moveit_example.launch 
 # Launch Locobot pick and place
 #gnome-terminal -x roslaunch me326_locobot_example locobot_pick_red.launch
 
