@@ -14,8 +14,13 @@ import gazebo_msgs.srv
 import tf2_ros
 import tf2_geometry_msgs
 import geometry_msgs.msg
+from geometry_msgs.msg import Point, PointStamped
+import visualization_msgs.msg
+from visualization_msgs.msg import Marker
 import nav_msgs.msg
 import copy
+import tf
+import numpy as np
 
 from tf.transformations import *
 
@@ -52,7 +57,8 @@ class MocapSimulatorNode:
             self.frame_rate = 100
         self.frame_delay = 1/float(self.frame_rate)
 
-        self.fixed_frame_id = rospy.get_param('~fixed_frame_id', "optitrack")
+        # self.fixed_frame_id = rospy.get_param('~fixed_frame_id', "optitrack")
+        self.fixed_frame_id = "locobot/base_link"
         self.model_list = rospy.get_param('~model_list', [])
 
     #=====================================
@@ -65,14 +71,19 @@ class MocapSimulatorNode:
         #----------------------------------
         #Publishers are stored in a dictionnary with the model name as key
         self.model_pub = {}
+        self.model_marker_pub = {}
         
         for model in self.model_list:
             rospy.loginfo("Initializing subject "+model)
             self.model_pub.update({model : { "pose_stamped_pub" : rospy.Publisher("vrpn_client_node/"+model+"/pose", geometry_msgs.msg.PoseStamped, queue_size=100),
                                              "pose_stamped_msg" : geometry_msgs.msg.PoseStamped(),
                                              }})
+            self.model_marker_pub.update({model : { "marker_pub" : rospy.Publisher("vrpn_client_node/"+model+"/marker", visualization_msgs.msg.Marker, queue_size=100),
+                                             "msg" : visualization_msgs.msg.Marker(),
+                                             }})
             #init message headers
             self.model_pub[model]["pose_stamped_msg"].header.frame_id = self.fixed_frame_id
+            self.model_marker_pub[model]["msg"].header.frame_id = self.fixed_frame_id
 
         #------------------------------------------
         # Initialize Gazebo model state subscriber
@@ -93,10 +104,31 @@ class MocapSimulatorNode:
                     if model_state_msg.name[i] == model:
                         #Get model pose from Gazebo message
                         self.model_pub[model]["pose_stamped_msg"].pose = model_state_msg.pose[i]
+                        start = model_state_msg.pose[i].position
+                        self.model_marker_pub[model]["msg"].pose.position.x = start.x
+                        self.model_marker_pub[model]["msg"].pose.position.y = start.y
+                        self.model_marker_pub[model]["msg"].pose.position.z = 0
+                        self.model_marker_pub[model]["msg"].color.r = 0.0
+                        self.model_marker_pub[model]["msg"].color.g = 0.0
+                        self.model_marker_pub[model]["msg"].color.b = 0.0
+                        self.model_marker_pub[model]["msg"].color.a = 1.0
+                        self.model_marker_pub[model]["msg"].scale.x = 0.7
+                        self.model_marker_pub[model]["msg"].scale.y = 0.07
+                        self.model_marker_pub[model]["msg"].scale.z = 0.07
+                        self.model_marker_pub[model]["msg"].ns = model
+                        quaternion = tf.transformations.quaternion_from_euler(0, -np.pi/2, start.z)
+                        self.model_marker_pub[model]["msg"].pose.orientation.x = quaternion[0]
+                        self.model_marker_pub[model]["msg"].pose.orientation.y = quaternion[1]
+                        self.model_marker_pub[model]["msg"].pose.orientation.z = quaternion[2]
+                        self.model_marker_pub[model]["msg"].pose.orientation.w = quaternion[3]
+                        
+                        self.model_marker_pub[model]["msg"].type = Marker.ARROW
                         #Timestamp messages
                         self.model_pub[model]["pose_stamped_msg"].header.stamp = curr_time
+                        self.model_marker_pub[model]["msg"].header.stamp = curr_time
                         #Publish messages
                         self.model_pub[model]["pose_stamped_pub"].publish(self.model_pub[model]["pose_stamped_msg"])
+                        self.model_marker_pub[model]["marker_pub"].publish(self.model_marker_pub[model]["msg"])
                         
 #=====================================
 #               Main

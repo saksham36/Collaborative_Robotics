@@ -81,8 +81,8 @@ class OccupancyGridNode(object):
         self.cube_sub = rospy.Subscriber('/locobot/camera_cube_locator', Marker, self.cube_callback)
 
         # Ego and other robot subscribers from Optitrack
-        self.ego_robot_sub = rospy.Subscriber(f'/vrpn_client_node/{self.ego_bot}', PoseStamped, self.ego_robot_callback)
-        self.other_robot_sub = rospy.Subscriber(f'/vrpn_client_node/{self.other_bot}', PoseStamped, self.other_robot_callback)
+        self.ego_robot_sub = rospy.Subscriber(f'/vrpn_client_node/{self.ego_bot}/pose', PoseStamped, self.ego_robot_callback)
+        self.other_robot_sub = rospy.Subscriber(f'/vrpn_client_node/{self.other_bot}/pose', PoseStamped, self.other_robot_callback)
         
     #=====================================
     #         Initializes occupancy grid
@@ -93,12 +93,9 @@ class OccupancyGridNode(object):
         self.occupancy_grid.info.resolution = self.resolution
         self.occupancy_grid.info.width = int(self.grid_size[0] / self.resolution) # num cells in x
         self.occupancy_grid.info.height = int(self.grid_size[1] / self.resolution) # num cells in y
-        print('cells x', self.occupancy_grid.info.width)
-        print('cells y', self.occupancy_grid.info.height)
         # origin --> real-world pose of the cell (0,0) in the map
         self.occupancy_grid.info.origin.position.x = self.origin[0] - self.grid_size[0]/2
         self.occupancy_grid.info.origin.position.y = self.origin[1] - self.grid_size[1]/2
-        print('origin', self.occupancy_grid.info.origin.position.x, self.occupancy_grid.info.origin.position.y)
         self.occupancy_grid.info.origin.position.z = 0
         self.occupancy_grid.info.origin.orientation.x = 0
         self.occupancy_grid.info.origin.orientation.y = 0
@@ -146,7 +143,6 @@ class OccupancyGridNode(object):
 
         # Update occupancy grid
         self.update_occupancy_grid(self.other_robot_pos[0], self.other_robot_pos[1], 100)
-        print("other pos", self.other_robot_pos)
 
         # Publish occupancy grid
         self.occupancy_grid_pub.publish(self.occupancy_grid)
