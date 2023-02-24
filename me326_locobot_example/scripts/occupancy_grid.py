@@ -24,7 +24,7 @@ import tf
 #   * * * * *
 #   * * * * *
 
-# origin is set at the middle of the grid (we must set the grid size to be odd)
+# origin is set at the middle of the grid
 
 ##################################################
 
@@ -115,9 +115,7 @@ class OccupancyGridNode(object):
 
         for cube_point in cube_points:
             # Get cube position
-            # print(cube_point.x, cube_point.y)
             cube_pos = self.transform_point(msg.header.frame_id, self.occupancy_grid.header.frame_id, cube_point, msg.header.stamp)
-            # print(cube_pos.point.x, cube_pos.point.y)
 
             # Update occupancy grid
             self.update_occupancy_grid(cube_pos.point.x, cube_pos.point.y, 100)
@@ -189,7 +187,7 @@ class OccupancyGridNode(object):
     	aux.header.stamp = ts
     	aux.point.x = point.x
     	aux.point.y = point.y
-    	aux.point.z = 0.0
+    	aux.point.z = point.z
     	return self.tf.transformPoint(dest_frame, aux)
     	
     
