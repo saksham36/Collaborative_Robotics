@@ -1,14 +1,18 @@
+#!/usr/bin/env python3
+
 from enum import Enum
 import rospy
 from nav_msgs.msg import OccupancyGrid, Path
-from controllers import TrajectoryController, PoseController, HeadingController
+from controllers.trajectory_controller import TrajectoryController
+from controllers.pose_controller import PoseController
+from controllers.heading_controller import HeadingController
 from geometry_msgs.msg import Twist, PoseStamped
 import tf
 from collections import deque
 import numpy as np
 import cv2
-from utils import wrapToPi, StochOccupancyGrid2D
-from planner import AStar, compute_smoothed_traj
+from utils.utils import wrapToPi, StochOccupancyGrid2D
+from planner.astar import AStar, compute_smoothed_traj
 
 class Mode(Enum):
     IDLE = 0
@@ -95,6 +99,10 @@ class Brain:
         self.y_prev = deque([], maxlen = self.max_len)
         self.theta_prev = deque([], maxlen = self.max_len)
 
+    def get_current_plan_time(self):
+    	t = (rospy.get_rostime() - self.current_plan_start_time).to_sec()
+    	return max(0.0, t)  # clip negative time to 0
+    
     def snap_to_grid(self, x):
         return (
             self.plan_resolution * round(x[0] / self.plan_resolution),
@@ -114,9 +122,11 @@ class Brain:
         self.map_resolution = msg.info.resolution
         self.map_origin = (msg.info.origin.position.x, msg.info.origin.position.y)
         self.map_metadata = msg.info
-
-        if len(self.map_probs) == len(msg.data) and np.isclose(self.map_probs, msg.data, atol=1e-5).all() and len(self.dilated_occupancy.data) > 0:
-            return
+        
+        #if len(self.map_probs) == len(msg.data) and np.isclose(self.map_probs, msg.data, atol=1e-5).all() and len(self.dilated_occupancy.data) > 0:
+            #return
+            
+        #rospy.loginfo("after if")
 
         self.map_probs = msg.data
 
@@ -137,6 +147,7 @@ class Brain:
         dilated_map[mask] = -1
         self.dilated_occupancy.data = tuple(dilated_map)
         self.dilated_occupancy.info = self.map_metadata
+        self.dilated_occupancy.header.frame_id = "locobot/base_link"
         self.occupancy = StochOccupancyGrid2D(
             self.map_resolution,
             self.map_width,
@@ -210,7 +221,7 @@ class Brain:
         cmd_vel = Twist()
         cmd_vel.linear.x = V
         cmd_vel.angular.z = om
-        self.vel_publisher(cmd_vel)
+        self.vel_publisher.publish(cmd_vel)
 
     def replan(self,):
         # Make sure we have a map
