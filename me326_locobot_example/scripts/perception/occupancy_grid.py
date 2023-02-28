@@ -75,7 +75,7 @@ class OccupancyGridNode(object):
     #=====================================
     def setup_sub_pub(self):
         # Occupancy grid publisher
-        self.occupancy_grid_pub = rospy.Publisher('/occupancy_grid', OccupancyGrid, queue_size=10)
+        self.occupancy_grid_pub = rospy.Publisher('/map', OccupancyGrid, queue_size=10)
 
         # Cube position subscriber
         self.cube_sub = rospy.Subscriber('/locobot/camera_cube_locator', Marker, self.cube_callback)
@@ -177,16 +177,14 @@ class OccupancyGridNode(object):
             self.occupancy_grid.data[y_index*self.occupancy_grid.info.width + x_index] = value
             
     def transform_point(self, org_frame, dest_frame, point, ts):
-    	self.tf.waitForTransform(org_frame, dest_frame, ts, rospy.Duration(4.0))
-    	aux = PointStamped()
-    	aux.header.frame_id = org_frame
-    	aux.header.stamp = ts
-    	aux.point.x = point.x
-    	aux.point.y = point.y
-    	aux.point.z = point.z
-    	return self.tf.transformPoint(dest_frame, aux)
-    	
-    
+        self.tf.waitForTransform(org_frame, dest_frame, ts, rospy.Duration(4.0))
+        aux = PointStamped()
+        aux.header.frame_id = org_frame
+        aux.header.stamp = ts
+        aux.point.x = point.x
+        aux.point.y = point.y
+        aux.point.z = point.z
+        return self.tf.transformPoint(dest_frame, aux)
 
 #=====================================
 #               Main

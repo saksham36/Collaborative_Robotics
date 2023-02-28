@@ -1,5 +1,5 @@
 <launch>
-<node type="occupancy_grid.py" name="occupancy_grid" pkg="me326_locobot_example" output="screen">
+<node type="perception/occupancy_grid.py" name="occupancy_grid" pkg="me326_locobot_example" output="screen">
     <rosparam param="ego_bot">"locobot"</rosparam>
     <rosparam param="other_bot">"locobot_2" </rosparam>
     <rosparam param="grid_size">[4,3.2] </rosparam>

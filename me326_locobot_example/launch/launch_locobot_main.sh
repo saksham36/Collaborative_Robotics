@@ -19,16 +19,17 @@ sleep 5
 gnome-terminal -x roslaunch me326_locobot_example optitrack_simulator.launch
 
 # Launch apriltag spawn and detector
-mkdir -p ~/.gazebo/models/
-cp -R ~/me326_ws/src/collaborative_robotics_course/me326_locobot_example/model/Ap* ~/.gazebo/models/
-sleep 5
-gnome-terminal -x roslaunch me326_locobot_example apriltag_spawn.launch
-gnome-terminal -x roslaunch me326_locobot_example apriltag_detector.launch
+# mkdir -p ~/.gazebo/models/
+# cp -R ~/me326_ws/src/collaborative_robotics_course/me326_locobot_example/model/Ap* ~/.gazebo/models/
+# sleep 5
+# gnome-terminal -x roslaunch me326_locobot_example apriltag_spawn.launch
+# gnome-terminal -x roslaunch me326_locobot_example apriltag_detector.launch
 
 # Occupancy Grid
 gnome-terminal -x roslaunch me326_locobot_example occupancy_grid.launch
 
-# Code file
-gnome-terminal -x roslaunch me326_locobot_example gazebo_moveit_example.launch 
-# Launch Locobot pick and place
-#gnome-terminal -x roslaunch me326_locobot_example locobot_pick_red.launch
+# Arm
+
+# Brain
+sleep 5
+gnome-terminal -x roslaunch me326_locobot_example locobot_main.launch
