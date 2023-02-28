@@ -100,8 +100,8 @@ class Brain:
         self.theta_prev = deque([], maxlen = self.max_len)
 
     def get_current_plan_time(self):
-    	t = (rospy.get_rostime() - self.current_plan_start_time).to_sec()
-    	return max(0.0, t)  # clip negative time to 0
+        t = (rospy.get_rostime() - self.current_plan_start_time).to_sec()
+        return max(0.0, t)  # clip negative time to 0
     
     def snap_to_grid(self, x):
         return (
@@ -123,10 +123,8 @@ class Brain:
         self.map_origin = (msg.info.origin.position.x, msg.info.origin.position.y)
         self.map_metadata = msg.info
         
-        #if len(self.map_probs) == len(msg.data) and np.isclose(self.map_probs, msg.data, atol=1e-5).all() and len(self.dilated_occupancy.data) > 0:
-            #return
-            
-        #rospy.loginfo("after if")
+        if len(self.map_probs) == len(msg.data) and np.isclose(self.map_probs, msg.data, atol=1e-5).all() and len(self.dilated_occupancy.data) > 0:
+            return
 
         self.map_probs = msg.data
 
@@ -147,7 +145,7 @@ class Brain:
         dilated_map[mask] = -1
         self.dilated_occupancy.data = tuple(dilated_map)
         self.dilated_occupancy.info = self.map_metadata
-        self.dilated_occupancy.header.frame_id = "locobot/base_link"
+        self.dilated_occupancy.header.frame_id = "locobot/odom"
         self.occupancy = StochOccupancyGrid2D(
             self.map_resolution,
             self.map_width,

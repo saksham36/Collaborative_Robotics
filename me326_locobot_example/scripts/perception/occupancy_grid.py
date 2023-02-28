@@ -15,6 +15,13 @@ from nav_msgs.msg import OccupancyGrid
 from visualization_msgs.msg import Marker
 from apriltag_ros.msg import AprilTagDetectionArray
 import tf
+from enum import Enum
+
+class CubeColor(Enum):
+    RED = 1
+    GREEN = 2
+    BLUE = 3
+    YELLOW = 4
 
 ############# Occupancy Grid Example #############
 
@@ -42,9 +49,10 @@ class OccupancyGridNode(object):
         # self.publish_occupancy_grid = False
 
         self.occupancy_grid = OccupancyGrid()
+        self.perception_grid = OccupancyGrid()
         
         # Initialize occupancy grid
-        self.init_occupancy_grid()
+        self.init_grids()
 
         #Setup model subcriber and pose/odom publishers
         self.setup_sub_pub()
@@ -77,6 +85,9 @@ class OccupancyGridNode(object):
         # Occupancy grid publisher
         self.occupancy_grid_pub = rospy.Publisher('/map', OccupancyGrid, queue_size=10)
 
+        # perception grid publisher
+        self.perception_grid_pub = rospy.Publisher('/perception_grid', OccupancyGrid, queue_size=10)
+
         # Cube position subscriber
         self.cube_sub = rospy.Subscriber('/locobot/camera_cube_locator', Marker, self.cube_callback)
 
@@ -87,21 +98,34 @@ class OccupancyGridNode(object):
     #=====================================
     #         Initializes occupancy grid
     #=====================================
-    def init_occupancy_grid(self):
+    def init_grids(self):
         self.occupancy_grid.header.stamp = rospy.Time.now()
-        self.occupancy_grid.header.frame_id = "locobot/base_link"
+        self.perception_grid.header.stamp = rospy.Time.now()
+        self.occupancy_grid.header.frame_id = "locobot/odom"
+        self.perception_grid.header.frame_id = "locobot/odom"
         self.occupancy_grid.info.resolution = self.resolution
+        self.perception_grid.info.resolution = self.resolution
         self.occupancy_grid.info.width = int(self.grid_size[0] / self.resolution) # num cells in x
+        self.perception_grid.info.width = int(self.grid_size[0] / self.resolution)
         self.occupancy_grid.info.height = int(self.grid_size[1] / self.resolution) # num cells in y
+        self.perception_grid.info.height = int(self.grid_size[1] / self.resolution)
         # origin --> real-world pose of the cell (0,0) in the map
         self.occupancy_grid.info.origin.position.x = self.origin[0] - self.grid_size[0]/2
         self.occupancy_grid.info.origin.position.y = self.origin[1] - self.grid_size[1]/2
+        self.perception_grid.info.origin.position.x = self.origin[0] - self.grid_size[0]/2
+        self.perception_grid.info.origin.position.y = self.origin[1] - self.grid_size[1]/2
         self.occupancy_grid.info.origin.position.z = 0
+        self.perception_grid.info.origin.position.z = 0
         self.occupancy_grid.info.origin.orientation.x = 0
         self.occupancy_grid.info.origin.orientation.y = 0
         self.occupancy_grid.info.origin.orientation.z = 0
         self.occupancy_grid.info.origin.orientation.w = 1
+        self.perception_grid.info.origin.orientation.x = 0
+        self.perception_grid.info.origin.orientation.y = 0
+        self.perception_grid.info.origin.orientation.z = 0
+        self.perception_grid.info.origin.orientation.w = 1
         self.occupancy_grid.data = [0] * self.occupancy_grid.info.width * self.occupancy_grid.info.height
+        self.perception_grid.data = [0] * self.perception_grid.info.width * self.perception_grid.info.height
     
     #=====================================
     #         Callback for cube
@@ -109,16 +133,32 @@ class OccupancyGridNode(object):
     def cube_callback(self, msg):
         # Get cube positions
         cube_points = msg.points
+        cube_colors = msg.colors
 
-        for cube_point in cube_points:
+        for ii, cube_point in enumerate(cube_points):
             # Get cube position
             cube_pos = self.transform_point(msg.header.frame_id, self.occupancy_grid.header.frame_id, cube_point, msg.header.stamp)
 
+            color = (cube_colors[ii].r, cube_colors[ii].g, cube_colors[ii].b)
+            if color == (1,0,0):
+                value = CubeColor.RED
+            elif color == (0,1,0):
+                value = CubeColor.GREEN
+            elif color == (0,0,1):
+                value = CubeColor.BLUE
+            elif color == (1,1,0):
+                value = CubeColor.YELLOW
+            else:
+                value = -1
+
             # Update occupancy grid
-            self.update_occupancy_grid(cube_pos.point.x, cube_pos.point.y, 100)
+            self.update_grid(self.occupancy_grid,cube_pos.point.x, cube_pos.point.y, 100)
+            self.update_grid(self.perception_grid,cube_pos.point.x, cube_pos.point.y, value)
         
         # Publish occupancy grid
         self.occupancy_grid_pub.publish(self.occupancy_grid)
+        # Publish perception grid
+        self.perception_grid_pub.publish(self.perception_grid)
 
     #=====================================
     #         Callback for ego robot
@@ -128,10 +168,12 @@ class OccupancyGridNode(object):
         self.ego_robot_pos = [msg.pose.position.x, msg.pose.position.y]
 
         # Update occupancy grid
-        self.update_occupancy_grid(self.ego_robot_pos[0], self.ego_robot_pos[1], 0)
+        self.update_grid(self.occupancy_grid, self.ego_robot_pos[0], self.ego_robot_pos[1], 0)
+        self.update_grid(self.perception_grid, self.ego_robot_pos[0], self.ego_robot_pos[1], 100)
 
         # Publish occupancy grid
         self.occupancy_grid_pub.publish(self.occupancy_grid)
+        self.perception_grid_pub.publish(self.perception_grid)
 
     
     #=====================================
@@ -142,7 +184,7 @@ class OccupancyGridNode(object):
         self.other_robot_pos = [msg.pose.position.x, msg.pose.position.y]
 
         # Update occupancy grid
-        self.update_occupancy_grid(self.other_robot_pos[0], self.other_robot_pos[1], 100)
+        self.update_grid(self.occupancy_grid, self.other_robot_pos[0], self.other_robot_pos[1], 100)
 
         # Publish occupancy grid
         self.occupancy_grid_pub.publish(self.occupancy_grid)
@@ -171,10 +213,10 @@ class OccupancyGridNode(object):
             return x_index, y_index
         return None
     
-    def update_occupancy_grid(self, x, y, value):
+    def update_grid(self, grid, x, y, value):
         x_index, y_index = self.get_cell_index_from_xy(x, y)
         if self.is_in_gridmap([x_index, y_index]):
-            self.occupancy_grid.data[y_index*self.occupancy_grid.info.width + x_index] = value
+            grid.data[y_index*grid.info.width + x_index] = value
             
     def transform_point(self, org_frame, dest_frame, point, ts):
         self.tf.waitForTransform(org_frame, dest_frame, ts, rospy.Duration(4.0))
