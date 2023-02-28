@@ -141,13 +141,13 @@ class OccupancyGridNode(object):
 
             color = (cube_colors[ii].r, cube_colors[ii].g, cube_colors[ii].b)
             if color == (1,0,0):
-                value = CubeColor.RED
+                value = CubeColor.RED.value
             elif color == (0,1,0):
-                value = CubeColor.GREEN
+                value = CubeColor.GREEN.value
             elif color == (0,0,1):
-                value = CubeColor.BLUE
+                value = CubeColor.BLUE.value
             elif color == (1,1,0):
-                value = CubeColor.YELLOW
+                value = CubeColor.YELLOW.value
             else:
                 value = -1
 

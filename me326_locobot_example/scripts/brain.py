@@ -6,7 +6,7 @@ from nav_msgs.msg import OccupancyGrid, Path
 from controllers.trajectory_controller import TrajectoryController
 from controllers.pose_controller import PoseController
 from controllers.heading_controller import HeadingController
-from geometry_msgs.msg import Twist, PoseStamped
+from geometry_msgs.msg import Twist, Pose2D
 import tf
 from collections import deque
 import numpy as np
@@ -91,7 +91,7 @@ class Brain:
 
         # subscribers
         rospy.Subscriber("/map", OccupancyGrid, self.map_callback)
-        rospy.Subscriber("/locobot/goal", PoseStamped, self.goal_callback)
+        rospy.Subscriber("/locobot/goal", Pose2D, self.goal_callback)
 
         # Previous state
         self.max_len = 50
@@ -123,8 +123,8 @@ class Brain:
         self.map_origin = (msg.info.origin.position.x, msg.info.origin.position.y)
         self.map_metadata = msg.info
         
-        if len(self.map_probs) == len(msg.data) and np.isclose(self.map_probs, msg.data, atol=1e-5).all() and len(self.dilated_occupancy.data) > 0:
-            return
+        #if len(self.map_probs) == len(msg.data) and np.isclose(self.map_probs, msg.data, atol=1e-5).all() and len(self.dilated_occupancy.data) > 0:
+            #return
 
         self.map_probs = msg.data
 
