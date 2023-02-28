@@ -2,6 +2,7 @@
 
 import rospy
 import tf 
+from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Pose2D, Point
 from visualization_msgs.msg import Marker
@@ -27,7 +28,6 @@ class GoalFinder:
 
         # Goal publisher
         self.goal_pub = rospy.Publisher('/locobot/goal', Pose2D, queue_size=10)
-        self.current_goal = None
 
     def load_config(self):
         with open(CONFIG_FILE, 'r') as f:
@@ -53,8 +53,6 @@ class GoalFinder:
         closest_cube = np.argmin(np.linalg.norm(cubes - robot_pos, axis=1))
         cube_pos = cubes[closest_cube]
         x,y = self.get_xy_from_cell_index(cube_pos)
-        #if self.current_goal != tuple((x,y)):
-        #	self.current_goal = tuple((x,y))
         self.publish_goal(x,y)
 
     def publish_goal(self, x, y):
@@ -63,20 +61,45 @@ class GoalFinder:
         goal.header.stamp = rospy.Time.now()
         goal.x = x
         goal.y = y
+        (_,rotation) = self.tf.lookupTransform('/locobot/odom', \
+            '/locobot/base_footprint', rospy.Time(0))
+        euler = euler_from_quaternion(rotation)
+        goal.theta = euler[2]
         self.goal_pub.publish(goal)
+
+        goal_marker = Marker()
+        goal_marker.header.frame_id = "/locobot/odom"
+        goal_marker.header.stamp = rospy.Time.now()
+        goal_marker.type = Marker.ARROW
+        goal_marker.action = Marker.ADD
+        goal_marker.pose.position.x = x
+        goal_marker.pose.position.y = y
+        goal_marker.pose.position.z = 0.1
+        goal_marker.pose.orientation.x = rotation[0]
+        goal_marker.pose.orientation.y = rotation[1]
+        goal_marker.pose.orientation.z = rotation[2]
+        goal_marker.pose.orientation.w = rotation[3]
+        goal_marker.scale.x = 0.3
+        goal_marker.scale.y = 0.1
+        goal_marker.scale.z = 0.1
+        goal_marker.color.a = 1.0
+        goal_marker.color.r = 0.0
+        goal_marker.color.g = 1.0
+        goal_marker.color.b = 0.0
+        self.goal_marker_pub.publish(goal_marker)
 
     
     def get_xy_from_cell_index(self, index):
-    	x = index[1]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.x
-    	y = index[0]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.y
-    	return x, y
+        x = index[1]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.x
+        y = index[0]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.y
+        return x, y
 
     def get_grid_as_np(self, grid):
         return np.array(grid.data).reshape(grid.info.height, grid.info.width)
 
     def get_robot_pos(self, grid):
-    	x, y = np.where(grid == 100)
-    	return np.array([x[0],y[0]])
+        x, y = np.where(grid == 100)
+        return np.array([x[0],y[0]])
     
     def mask_grid(self, grid):
         for color in self.config['colors']:
@@ -91,7 +114,6 @@ class GoalFinder:
                     val = CubeColor.YELLOW
                 xs, ys = np.where(grid == val)
                 for x, y in zip(xs,ys):
-                    x,y = pos
                     grid[x,y] = 0
 
 

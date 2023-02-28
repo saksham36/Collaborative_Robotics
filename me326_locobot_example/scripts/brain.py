@@ -6,7 +6,7 @@ from nav_msgs.msg import OccupancyGrid, Path
 from controllers.trajectory_controller import TrajectoryController
 from controllers.pose_controller import PoseController
 from controllers.heading_controller import HeadingController
-from geometry_msgs.msg import Twist, Pose2D
+from geometry_msgs.msg import Twist, Pose2D, PoseStamped
 import tf
 from collections import deque
 import numpy as np
