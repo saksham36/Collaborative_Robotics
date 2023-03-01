@@ -113,8 +113,9 @@ class Brain:
         return (x_index, y_index)
 
     def goal_callback(self, data):
-        if np.isclose(data.x, self.x_g) and np.isclose(data.y, self.y_g) and np.isclose(data.theta, self.theta_g):
-            return
+        if self.x_g is not None:
+            if np.isclose(data.x, self.x_g) and np.isclose(data.y, self.y_g) and np.isclose(data.theta, self.theta_g):
+                return
         self.x_g = data.x
         self.y_g = data.y
         self.theta_g = data.theta
