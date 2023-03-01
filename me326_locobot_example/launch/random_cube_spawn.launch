@@ -14,4 +14,8 @@
     <node name="spawn_7_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.9139091915574131 -y 0.03611589071230242 -z 0.1 -param blue_cube_model -model blue_cube_7" respawn="false" output="screen"/>
     <node name="spawn_8_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.6495462338043025 -y 0.8277026164308642 -z 0.1 -param red_cube_model -model red_cube_8" respawn="false" output="screen"/>
     <node name="spawn_9_cube" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.7783811284968724 -y 0.6365743499477426 -z 0.1 -param green_cube_model -model green_cube_9" respawn="false" output="screen"/>
+
+    <node name="spawn_locobot_2" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.9783811284968724 -y -0.6365743499477426 -z 0.1 -param green_cube_model -model locobot_2" respawn="false" output="screen"/>
+    <node name="spawn_locobot_3" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.0495462338043025 -y -0.8277026164308642 -z 0.1 -param red_cube_model -model locobot_3" respawn="false" output="screen"/>
+    
 </launch>

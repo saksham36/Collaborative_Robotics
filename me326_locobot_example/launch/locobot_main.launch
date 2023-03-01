@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<launch>
+    <group ns="locobot">
+        <node type="brain.py" name="locobot_brain" pkg="me326_locobot_example" respawn="false" output="screen"/>
+    </group>
+</launch>
