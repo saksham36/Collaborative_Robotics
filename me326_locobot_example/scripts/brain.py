@@ -51,14 +51,21 @@ class Brain:
 
         # plan parameters
         self.plan_resolution = 0.1
-        self.plan_horizon = 15
+        self.plan_horizon = 2
+        self.plan_fail = 0
+        self.fail_threshold = 5
 
         # time when we started following the plan
         self.current_plan_start_time = rospy.get_rostime()
+        self.current_plan_duration = 0
+        self.plant_start = [0.0,0.0]
 
         # robot limits
         self.v_max = 0.22
         self.om_max = 0.4
+        self.v_des = 0.12
+        self.theta_start_thresh = 0.05
+        self.start_pos_thresh = 0.15
 
         # threshold at which navigator switches from trajectory to pose control
         self.near_thresh = 0.2
@@ -103,11 +110,11 @@ class Brain:
         t = (rospy.get_rostime() - self.current_plan_start_time).to_sec()
         return max(0.0, t)  # clip negative time to 0
     
-    def snap_to_grid(self, x):
-        return (
-            self.plan_resolution * round(x[0] / self.plan_resolution),
-            self.plan_resolution * round(x[1] / self.plan_resolution),
-        )
+        
+    def snap_to_grid(self, x, y):
+        x_index = self.dilated_occupancy.info.resolution * int((x - self.dilated_occupancy.info.origin.position.x)/self.dilated_occupancy.info.resolution)
+        y_index = self.dilated_occupancy.info.resolution * int((y - self.dilated_occupancy.info.origin.position.y)/self.dilated_occupancy.info.resolution)
+        return x_index, y_index
 
     def goal_callback(self, data):
         if data.x != self.x_g or data.y != self.y_g or data.theta != self.theta_g:
@@ -174,6 +181,12 @@ class Brain:
         return (
             abs(wrapToPi(self.theta - self.th_init)) < self.theta_start_thresh
         )
+        
+    def close_to_plan_start(self):
+    	return (
+            abs(self.x - self.plan_start[0]) < self.start_pos_thresh
+            and abs(self.y - self.plan_start[1]) < self.start_pos_thresh
+        )
     
     def switch_mode(self, new_mode):
         rospy.loginfo("Switching from %s -> %s", self.mode, new_mode)
@@ -228,18 +241,21 @@ class Brain:
             return
         
         # Attempt to plan a path
-        state_min = self.snap_to_grid((-self.plan_horizon, -self.plan_horizon))
-        state_max = self.snap_to_grid((self.plan_horizon, self.plan_horizon))
-        x_init = self.snap_to_grid((self.x, self.y))
+        state_min = self.snap_to_grid(-self.plan_horizon, -self.plan_horizon)
+        state_max = self.snap_to_grid(self.plan_horizon, self.plan_horizon)
+        x_init = self.snap_to_grid(self.x, self.y)
         self.plan_start = x_init
-        x_goal = self.snap_to_grid((self.x_g, self.y_g))
+        x_goal = self.snap_to_grid(self.x_g, self.y_g)
+        origin = self.snap_to_grid(self.dilated_occupancy.info.origin.position.x, self.dilated_occupancy.info.origin.position.y)
+        
         problem = AStar(
             state_min,
             state_max,
             x_init,
             x_goal,
             self.occupancy,
-            self.plan_resolution,
+            self.dilated_occupancy.info.resolution,
+            origin,
         )
 
         success = problem.solve()
@@ -263,7 +279,7 @@ class Brain:
         )
 
         # If currently tracking a trajectory, check whether new trajectory will take more time to follow
-        if self.mode == Mode.TRACK:
+        if self.mode == Mode.MOVE:
             t_remaining_curr = (
                 self.current_plan_duration - self.get_current_plan_time()
             )
@@ -352,7 +368,7 @@ class Brain:
                     self.theta_g = None
                     self.switch_mode(Mode.IDLE)
                     
-            self.publish_control()
+            #self.publish_control()
             rate.sleep()
 
     def shutdown_callback(self):

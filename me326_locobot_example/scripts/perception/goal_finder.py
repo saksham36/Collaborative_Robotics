@@ -28,6 +28,7 @@ class GoalFinder:
 
         # Goal publisher
         self.goal_pub = rospy.Publisher('/locobot/goal', Pose2D, queue_size=10)
+        self.goal_marker_pub = rospy.Publisher('/locobot/marker_goal', Marker, queue_size=1)
 
     def load_config(self):
         with open(CONFIG_FILE, 'r') as f:
@@ -57,18 +58,16 @@ class GoalFinder:
 
     def publish_goal(self, x, y):
         goal = Pose2D()
-        goal.header.frame_id = "locobot/odom"
-        goal.header.stamp = rospy.Time.now()
         goal.x = x
         goal.y = y
-        (_,rotation) = self.tf.lookupTransform('/locobot/odom', \
-            '/locobot/base_footprint', rospy.Time(0))
+        (_,rotation) = self.tf.lookupTransform('locobot/odom', \
+            'locobot/base_footprint', rospy.Time(0))
         euler = euler_from_quaternion(rotation)
         goal.theta = euler[2]
         self.goal_pub.publish(goal)
 
         goal_marker = Marker()
-        goal_marker.header.frame_id = "/locobot/odom"
+        goal_marker.header.frame_id = "locobot/odom"
         goal_marker.header.stamp = rospy.Time.now()
         goal_marker.type = Marker.ARROW
         goal_marker.action = Marker.ADD

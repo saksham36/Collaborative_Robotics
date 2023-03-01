@@ -28,4 +28,4 @@ class HeadingController:
         V = 0
         om = np.clip(om, -self.om_max, self.om_max)
 
-        return V, 
+        return V, om 

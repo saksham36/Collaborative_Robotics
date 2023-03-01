@@ -193,8 +193,8 @@ class OccupancyGridNode(object):
         return np.array(self.occupancy_grid.data).reshape(self.occupancy_grid.info.height, self.occupancy_grid.info.width)
     
     def get_xy_from_cell_index(self, index):
-        x = index[0]*self.resolution + self.occupancy_grid.info.origin.position.x
-        y = index[1]*self.resolution + self.occupancy_grid.info.origin.position.y
+        x = index[1]*self.resolution + self.occupancy_grid.info.origin.position.x
+        y = index[0]*self.resolution + self.occupancy_grid.info.origin.position.y
         return x, y
     
     def get_cell_index_from_xy(self, x, y):
