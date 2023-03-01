@@ -66,7 +66,7 @@ class Brain:
         self.start_pos_thresh = 0.15
 
         # threshold at which to stop moving
-        self.at_thresh = 0.3
+        self.at_thresh = 0.43
         self.at_thresh_theta = 0.05
 
         # trajectory smoothing
@@ -114,7 +114,7 @@ class Brain:
 
     def goal_callback(self, data):
         if self.x_g is not None:
-            if np.isclose(data.x, self.x_g) and np.isclose(data.y, self.y_g) and np.isclose(data.theta, self.theta_g):
+            if self.mode != Mode.IDLE or  self.mode == Mode.IDLE and np.isclose(data.x, self.x_g) and np.isclose(data.y, self.y_g):
                 return
         self.x_g = data.x
         self.y_g = data.y
@@ -260,7 +260,7 @@ class Brain:
         planned_path = problem.path
 
         # Check whether path is too short
-        if len(planned_path) < 4:
+        if len(planned_path) < 6:
             rospy.loginfo("Path too short")
             self.switch_mode(Mode.IDLE)
             return
@@ -334,7 +334,7 @@ class Brain:
                 self.theta_prev.append(self.theta)
 
             if self.mode == Mode.IDLE:
-                pass
+                    self.replan()
 
             elif self.mode == Mode.ALIGN:
                 if self.aligned():
@@ -342,10 +342,6 @@ class Brain:
                     self.switch_mode(Mode.MOVE)
             elif self.mode == Mode.MOVE:
                 if self.at_goal():
-                    # forget about goal
-                    self.x_g = None
-                    self.y_g = None
-                    self.theta_g = None
                     self.switch_mode(Mode.IDLE) 
                 elif not self.close_to_plan_start():
                     rospy.loginfo("Replanning because far from start")

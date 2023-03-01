@@ -30,6 +30,6 @@ gnome-terminal -x roslaunch me326_locobot_example occupancy_grid.launch
 
 # Arm
 
-# Brain
+# Brain & Goal
 sleep 5
 gnome-terminal -x roslaunch me326_locobot_example locobot_main.launch
