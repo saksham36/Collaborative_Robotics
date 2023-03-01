@@ -112,8 +112,8 @@ class Brain:
     
         
     def snap_to_grid(self, x, y):
-        x_index = self.dilated_occupancy.info.resolution * int((x - self.dilated_occupancy.info.origin.position.x)/self.dilated_occupancy.info.resolution)
-        y_index = self.dilated_occupancy.info.resolution * int((y - self.dilated_occupancy.info.origin.position.y)/self.dilated_occupancy.info.resolution)
+        x_index = self.dilated_occupancy.info.resolution * int(x/self.dilated_occupancy.info.resolution)
+        y_index = self.dilated_occupancy.info.resolution * int(y/self.dilated_occupancy.info.resolution)
         return x_index, y_index
 
     def goal_callback(self, data):
@@ -183,11 +183,11 @@ class Brain:
         )
         
     def close_to_plan_start(self):
-    	return (
+        return (
             abs(self.x - self.plan_start[0]) < self.start_pos_thresh
             and abs(self.y - self.plan_start[1]) < self.start_pos_thresh
         )
-    
+        
     def switch_mode(self, new_mode):
         rospy.loginfo("Switching from %s -> %s", self.mode, new_mode)
         self.mode = new_mode
@@ -243,6 +243,10 @@ class Brain:
         # Attempt to plan a path
         state_min = self.snap_to_grid(-self.plan_horizon, -self.plan_horizon)
         state_max = self.snap_to_grid(self.plan_horizon, self.plan_horizon)
+        state_min[0] += self.dilated_occupancy.info.origin.position.x
+        state_min[1] += self.dilated_occupancy.info.origin.position.y
+        state_max[0] += self.dilated_occupancy.info.origin.position.x
+        state_max[1] += self.dilated_occupancy.info.origin.position.y
         x_init = self.snap_to_grid(self.x, self.y)
         self.plan_start = x_init
         x_goal = self.snap_to_grid(self.x_g, self.y_g)
