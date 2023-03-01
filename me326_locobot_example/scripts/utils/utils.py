@@ -1,4 +1,5 @@
 import numpy as np
+import rospy
 
 def wrapToPi(a):
     if isinstance(a, list):
@@ -23,6 +24,7 @@ class StochOccupancyGrid2D(object):
     def is_free(self, state):
         # combine the probabilities of each cell by assuming independence
         # of each estimation
+        return True
         p_total = 1.0
         lower = -int(round((self.window_size-1)/2))
         upper = int(round((self.window_size-1)/2))
@@ -33,4 +35,5 @@ class StochOccupancyGrid2D(object):
                 grid_y = int((y - self.origin_y) / self.resolution)
                 if grid_y>0 and grid_x>0 and grid_x<self.width and grid_y<self.height:
                     p_total *= (1.0-max(0.0,float(self.probs[grid_y * self.width + grid_x])/100.0))
+                    
         return (1.0-p_total) < self.thresh
