@@ -5,14 +5,13 @@ import rospy
 class AStar(object):
     """Represents a motion planning problem to be solved using A*"""
 
-    def __init__(self, statespace_lo, statespace_hi, x_init, x_goal, occupancy, resolution, origin):
+    def __init__(self, statespace_lo, statespace_hi, x_init, x_goal, occupancy, resolution):
         self.statespace_lo = statespace_lo
         self.statespace_hi = statespace_hi
         self.occupancy = occupancy                 # occupancy grid 
         self.resolution = resolution               # resolution of the discretization of state space (cell/m)
         self.x_init = x_init    # initial state
         self.x_goal = x_goal  # goal state
-        self.origin = origin
 
         self.closed_set = set()    # the set containing the states that have been visited
         self.open_set = set()      # the set containing the states that are candidate for future expansion
@@ -53,8 +52,8 @@ class AStar(object):
         Output:
             A tuple that represents the closest point to x on the discrete state grid
         """
-        x_index = self.resolution * int((x[0] - self.origin[0])/self.resolution)
-        y_index = self.resolution * int((x[1] - self.origin[1])/self.resolution)
+        x_index = self.resolution * int(x[0]/self.resolution)
+        y_index = self.resolution * int(x[1]/self.resolution)
         return (x_index, y_index)
 
     def get_neighbors(self, x):
