@@ -390,24 +390,24 @@ class Brain:
                 self.y_prev.append(self.y)
                 self.theta_prev.append(self.theta)
 
-	    if self.mode == Mode.IDLE:
-	            self.replan()
+            if self.mode == Mode.IDLE:
+                self.replan()
 
-	    elif self.mode == Mode.ALIGN:
-	        if self.aligned():
-	            self.current_plan_start_time = rospy.get_rostime()
-	            self.switch_mode(Mode.MOVE)
-	    elif self.mode == Mode.MOVE:
-	        if self.at_goal():
-	            self.switch_mode(Mode.IDLE) 
-	        elif not self.close_to_plan_start():
-	            rospy.loginfo("Replanning because far from start")
-	            self.replan()
-	        elif (
-	            rospy.get_rostime() - self.current_plan_start_time
-	        ).to_sec() > self.current_plan_duration:
-	            rospy.loginfo("Replanning because out of time")
-	            self.replan()  # we aren't near the goal but we thought we should have been, so replan
+            elif self.mode == Mode.ALIGN:
+                if self.aligned():
+                    self.current_plan_start_time = rospy.get_rostime()
+                    self.switch_mode(Mode.MOVE)
+            elif self.mode == Mode.MOVE:
+                if self.at_goal():
+                    self.switch_mode(Mode.IDLE) 
+                elif not self.close_to_plan_start():
+                    rospy.loginfo("Replanning because far from start")
+                    self.replan()
+                elif (
+                    rospy.get_rostime() - self.current_plan_start_time
+                ).to_sec() > self.current_plan_duration:
+                    rospy.loginfo("Replanning because out of time")
+                    self.replan()  # we aren't near the goal but we thought we should have been, so replan
                     
             self.publish_control()
             rate.sleep()
