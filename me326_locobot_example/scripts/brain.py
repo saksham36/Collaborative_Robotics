@@ -94,7 +94,7 @@ class Brain:
         self.start_pos_thresh = 0.15
 
         # threshold at which to stop moving
-        self.at_thresh = 0.43
+        self.at_thresh = 0.33
         self.at_thresh_theta = 0.05
 
         # trajectory smoothing
@@ -415,7 +415,7 @@ class Brain:
                     rospy.loginfo("Replanning because out of time")
                     self.replan()  # we aren't near the goal but we thought we should have been, so replan
 
-            elif self.Mode == Mode.PICK:
+            elif self.mode == Mode.PICK:
                 p = PoseStamped()
                 p.header.frame_id = "locobot/base_link"
                 p.pose.position.x = self.x_g
