@@ -12,16 +12,38 @@ import numpy as np
 import cv2
 from utils.utils import wrapToPi, StochOccupancyGrid2D
 from planner.astar import AStar, compute_smoothed_traj
+from std_msgs.msg import Float64
 
 class Mode(Enum):
     IDLE = 0
-    ALIGN = 1
-    MOVE = 2
+    INIT = 1
+    ALIGN = 2
+    MOVE = 3
+    PICK = 4
+    DROP = 5
+
+
+class OrientCamera(object):
+	"""docstring for OrientCamera"""
+	def __init__(self, tilt_topic = "/locobot/tilt_controller/command", pan_topic = "/locobot/pan_controller/command"):		
+		self.orient_pub = rospy.Publisher(tilt_topic, Float64, queue_size=1, latch=True)
+		self.pan_pub = rospy.Publisher(pan_topic, Float64, queue_size=1, latch=True)
+
+	def tilt_camera(self,angle=0.5):
+		msg = Float64()
+		msg.data = angle
+		self.orient_pub.publish(msg)
+		# print("cause orientation, msg: ", msg)
+
+	def pan_camera(self,angle=0.5):
+		msg = Float64()
+		msg.data = angle
+		self.pan_pub.publish(msg)
 
 class Brain:
     def __init__(self):
         rospy.init_node("locobot_brain", anonymous=True)
-        self.mode = Mode.IDLE
+        self.mode = Mode.INIT
 
         # current state
         self.x = 0.0
@@ -32,6 +54,9 @@ class Brain:
         self.x_g = None
         self.y_g = None
         self.theta_g = None
+
+        # camera goal orientation
+        self.explore_theta = None
 
         self.th_init = 0.0
         self.robot_dims = (2, 2)
@@ -102,6 +127,8 @@ class Brain:
         self.y_prev = deque([], maxlen = self.max_len)
         self.theta_prev = deque([], maxlen = self.max_len)
 
+        self.camera = OrientCamera()
+
     def get_current_plan_time(self):
         t = (rospy.get_rostime() - self.current_plan_start_time).to_sec()
         return max(0.0, t)  # clip negative time to 0
@@ -111,6 +138,24 @@ class Brain:
         x_index = self.dilated_occupancy.info.resolution * int(x/self.dilated_occupancy.info.resolution)
         y_index = self.dilated_occupancy.info.resolution * int(y/self.dilated_occupancy.info.resolution)
         return (x_index, y_index)
+    
+    def camera_explore(self, start=False):
+        if start:
+            self.camera.tilt_camera(0.5)
+            self.explore_theta = self.theta
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0
+            cmd_vel.angular.z = 0.2
+            self.vel_publisher.publish(cmd_vel)
+        else:
+            if abs(wrapToPi(self.theta - self.explore_theta)) < self.at_thresh_theta:
+                cmd_vel = Twist()
+                cmd_vel.linear.x = 0
+                cmd_vel.angular.z = 0
+                self.vel_publisher.publish(cmd_vel)
+                self.mode = Mode.IDLE
+                self.explore_theta = None
+
 
     def goal_callback(self, data):
         if self.x_g is not None:
@@ -327,6 +372,10 @@ class Brain:
                 self.switch_mode(Mode.IDLE)
                 print(e)
                 pass
+
+            if self.mode == Mode.INIT:
+                if self.explore_theta is None:
+                    self.camera_explore(start=True)
 
             if self.mode != Mode.IDLE:
                 self.x_prev.append(self.x)
