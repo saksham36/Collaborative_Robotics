@@ -67,7 +67,7 @@ class GoalFinder:
         goal.x = x
         goal.y = y
         (_,rotation) = self.tf.lookupTransform('locobot/odom', \
-            'locobot/base_footprint', rospy.Time(0))
+            'locobot/base_link', rospy.Time(0))
         euler = euler_from_quaternion(rotation)
         goal.theta = euler[2]
         self.goal_pub.publish(goal)

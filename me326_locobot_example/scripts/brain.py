@@ -155,16 +155,15 @@ class Brain:
             rospy.loginfo('Starting to explore world')
             self.explore_theta = self.theta
             self.prev_theta = None
-            
-        rospy.loginfo(abs(self.theta - self.explore_theta))
 
-        if self.prev_theta and self.prev_theta - self.theta > 0 and abs(self.theta - self.explore_theta) < 0.1:
+        if self.prev_theta and self.prev_theta - self.theta < 0 and abs(self.theta - self.explore_theta) < 0.1:
             cmd_vel = Twist()
             cmd_vel.linear.x = 0
             cmd_vel.angular.z = 0.0
             self.vel_publisher.publish(cmd_vel)
             self.mode = Mode.IDLE
-            self.explore_theta = None  
+            self.explore_theta = None
+            self.prev_theta = None  
         else:
             cmd_vel = Twist()
             cmd_vel.linear.x = 0
@@ -175,16 +174,12 @@ class Brain:
                 
 
     def goal_callback(self, data):
-        if self.mode == Mode.INIT:
-            return
-        if self.x_g is not None:
-            if self.mode != Mode.IDLE or  self.mode == Mode.IDLE and np.isclose(data.x, self.x_g) and np.isclose(data.y, self.y_g):
-                return
-        self.x_g = data.x
-        self.y_g = data.y
-        self.theta_g = data.theta
-        rospy.loginfo('Received Goal')
-        self.replan()
+        if self.x_g is None and self.mode != Mode.INIT:
+            self.x_g = data.x
+            self.y_g = data.y
+            self.theta_g = data.theta
+            rospy.loginfo('Received Goal')
+            self.replan()
 
     def map_callback(self, msg):
         self.map_width = msg.info.width
@@ -283,7 +278,6 @@ class Brain:
                 self.x, self.y, self.theta, t
             )
         else:
-            # IDLE
             V = 0.0
             om = 0.0
 
@@ -375,7 +369,7 @@ class Brain:
             # try to get state information to update self.x, self.y, self.theta
             try:
                 (translation, rotation) = self.trans_listener.lookupTransform(
-                    "/locobot/odom", "/locobot/base_footprint", rospy.Time(0)
+                    "/locobot/odom", "/locobot/base_link", rospy.Time(0)
                 )
                 self.x = translation[0]
                 self.y = translation[1]
@@ -388,9 +382,8 @@ class Brain:
             ) as e:
                 self.current_plan = []
                 rospy.loginfo("Navigator: waiting for state info")
-                # self.switch_mode(Mode.IDLE)
-                print(e)
-                pass
+                rate.sleep()
+                continue
 
             if self.mode == Mode.INIT:
                 if self.explore_theta is None:
@@ -400,21 +393,19 @@ class Brain:
                 rate.sleep()
                 continue
                 
-            if self.mode != Mode.IDLE:
+            if self.mode in [Mode.ALIGN, Mode.MOVE]:
                 self.x_prev.append(self.x)
                 self.y_prev.append(self.y)
                 self.theta_prev.append(self.theta)
 
-            if self.mode == Mode.IDLE:
-                self.replan()
-
-            elif self.mode == Mode.ALIGN:
+            if self.mode == Mode.ALIGN:
                 if self.aligned():
                     self.current_plan_start_time = rospy.get_rostime()
                     self.switch_mode(Mode.MOVE)
+
             elif self.mode == Mode.MOVE:
                 if self.at_goal():
-                    self.switch_mode(Mode.IDLE) 
+                    self.switch_mode(Mode.PICK)
                 elif not self.close_to_plan_start():
                     rospy.loginfo("Replanning because far from start")
                     self.replan()
@@ -423,6 +414,20 @@ class Brain:
                 ).to_sec() > self.current_plan_duration:
                     rospy.loginfo("Replanning because out of time")
                     self.replan()  # we aren't near the goal but we thought we should have been, so replan
+
+            elif self.Mode == Mode.PICK:
+                p = PoseStamped()
+                p.header.frame_id = "locobot/base_link"
+                p.pose.position.x = self.x_g
+                p.pose.position.y = self.y_g
+                p.pose.position.z = 0.1
+                quat = tf.transformations.quaternion_from_euler(0, self.theta_g, 0)
+                p.pose.orientation.x = quat[0]
+                p.pose.orientation.y = quat[1]
+                p.pose.orientation.z = quat[2]
+                p.pose.orientation.w = quat[3]
+                self.move_arm_object.move_gripper_down_to_grasp_callback(p)
+                self.switch_mode(Mode.IDLE)
                     
             self.publish_control()
             rate.sleep()

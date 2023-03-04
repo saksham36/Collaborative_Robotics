@@ -44,12 +44,11 @@ class MoveLocobotArm(object):
         self.jnt_names = self.arm_move_group.get_active_joints()
         # We can get a list of all the groups in the robot:
         self.group_names = self.robot.get_group_names()
-        #only reach for the block one time
-        self.reachedBlock = False
         #create transform object
         self.listener = TransformListener()
         self.red_marker_arm_frame_publisher = rospy.Publisher("/locobot/blocks/red_marker_arm_frame", Marker, queue_size=1) #this is the topic we will publish to in order to move the base
         self.pose_goal = geometry_msgs.msg.Pose()
+
     def display_moveit_info(self):
         # We can get the name of the reference frame for this robot:
         print("============ Planning frame: %s" % self.planning_frame)
@@ -63,6 +62,7 @@ class MoveLocobotArm(object):
         print("============ Printing robot state")
         print(self.robot.get_current_state())
         print("\n")
+
     def move_arm_down_for_camera(self):
         #start here
         joint_goal = self.arm_move_group.get_current_joint_values()
@@ -76,6 +76,7 @@ class MoveLocobotArm(object):
         # The go command can be called with joint values, poses, or without any
         # parameters if you have already set the pose or joint target for the group
         self.arm_move_group.go(joint_goal, wait=True)
+
     def marker_arm(self):
         #this is very simple because we are just putting the point P in the base_link frame (it is static in this frame)
         marker = Marker()
@@ -98,60 +99,37 @@ class MoveLocobotArm(object):
         marker.color.b = 0.0
         # Publish the marker
         self.red_marker_arm_frame_publisher.publish(marker)
-        
-    def move_gripper_down_to_grasp_callback(self, red_marker):
-        if self.reachedBlock == False:
-            try:
-                #get world to arm base frame transpose
-                #wait a second to be sure (probably fine since listener was creater earlier in init section)
-                self.listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
-                #self.listener.lookupTransform("/locobot/odom", "/locobot/arm_base", rospy.Time(0), transform)
-                #find the world frame values
-                red_cube_pnt=PointStamped()
-                red_cube_pnt.header.frame_id = "/locobot/odom"
-                red_cube_pnt.header.stamp =rospy.Time(0)
-                red_cube_pnt.point.x=red_marker.pose.position.x
-                red_cube_pnt.point.y=red_marker.pose.position.y
-                red_cube_pnt.point.z=red_marker.pose.position.z
-                #transform to arm base frame
-                pos_in_arm=self.listener.transformPoint("/locobot/base_link",red_cube_pnt)
-                #extract into a format to give move it
-                self.pose_goal.position.x = pos_in_arm.point.x
-                self.pose_goal.position.y = pos_in_arm.point.y
-                self.pose_goal.position.z = pos_in_arm.point.z
-                print("pos in world" + "\n", red_marker)
-                print("pos in arm" + "\n", pos_in_arm)
-                print("pos in arm, goal format" + "\n", self.pose_goal)
-                v = np.matrix([0,1,0]) #pitch about y-axis
-                th = 10*np.pi/180. #pitch by 45deg
-                #note that no rotation is th= 0 deg
-                self.pose_goal.orientation.x = v.item(0)*np.sin(th/2)
-                self.pose_goal.orientation.y = v.item(1)*np.sin(th/2)
-                self.pose_goal.orientation.z = v.item(2)*np.sin(th/2)
-                self.pose_goal.orientation.w = np.cos(th/2)
-                #publish a marker to the goal
-                self.marker_arm()
-                self.arm_move_group.set_pose_target(self.pose_goal)
-                # now we call the planner to compute and execute the plan
-                plan = self.arm_move_group.go(wait=True)
-                # Calling `stop()` ensures that there is no residual movement
-                self.arm_move_group.stop()
-                # It is always good to clear your targets after planning with poses.
-                # Note: there is no equivalent function for clear_joint_value_targets()
-                self.arm_move_group.clear_pose_targets()
-                #only move once for now
-                self.reachedBlock = True
-                opened = False
-            except Exception as e:
-                print("Error Pick Read: ", e)
-        self.open_gripper()
-        self.close_gripper()
-        self.move_arm_down_for_camera()
+
+    def move_gripper_down_to_grasp_callback(self, goal):
+        try:
+            self.pose_goal.position.x = goal.point.x
+            self.pose_goal.position.y = goal.point.y
+            self.pose_goal.position.z = goal.point.z
+            self.pose_goal.orientation.x = goal.orientation.x
+            self.pose_goal.orientation.y = goal.orientation.y
+            self.pose_goal.orientation.z = goal.orientation.z
+            self.pose_goal.orientation.w = goal.orientation.w
+            # publish a marker to the goal
+            self.marker_arm()
+            self.arm_move_group.set_pose_target(self.pose_goal)
+            # now we call the planner to compute and execute the plan
+            self.arm_move_group.go(wait=True)
+            # Calling `stop()` ensures that there is no residual movement
+            self.arm_move_group.stop()
+            # It is always good to clear your targets after planning with poses.
+            # Note: there is no equivalent function for clear_joint_value_targets()
+            self.arm_move_group.clear_pose_targets()
+            self.open_gripper()
+            self.close_gripper()
+            self.move_arm_down_for_camera()
+        except Exception as e:
+            print("Error Pick Read: ", e)
 
     def open_gripper(self):
         gripper_goal = self.gripper_move_group.get_named_target_values('Open')
         self.gripper_move_group.go(gripper_goal, wait=True)
         self.gripper_move_group.stop()
+
     def close_gripper(self):
         gripper_goal = self.gripper_move_group.get_named_target_values("Closed")
         self.gripper_move_group.go(gripper_goal, wait=True)
