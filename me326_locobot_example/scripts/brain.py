@@ -148,6 +148,8 @@ class Brain:
             cmd_vel.angular.z = 0.2
             self.vel_publisher.publish(cmd_vel)
         else:
+            rospy.loginfo('theta diff')
+            rospy.loginfo(abs(wrapToPi(self.theta - self.explore_theta)))
             if abs(wrapToPi(self.theta - self.explore_theta)) < self.at_thresh_theta:
                 cmd_vel = Twist()
                 cmd_vel.linear.x = 0
@@ -158,6 +160,8 @@ class Brain:
 
 
     def goal_callback(self, data):
+        if self.mode == Mode.INIT:
+            return
         if self.x_g is not None:
             if self.mode != Mode.IDLE or  self.mode == Mode.IDLE and np.isclose(data.x, self.x_g) and np.isclose(data.y, self.y_g):
                 return
@@ -369,37 +373,41 @@ class Brain:
             ) as e:
                 self.current_plan = []
                 rospy.loginfo("Navigator: waiting for state info")
-                self.switch_mode(Mode.IDLE)
+                # self.switch_mode(Mode.IDLE)
                 print(e)
                 pass
 
             if self.mode == Mode.INIT:
                 if self.explore_theta is None:
                     self.camera_explore(start=True)
-
+                else:
+                    self.camera_explore()
+                rate.sleep()
+                continue
+                
             if self.mode != Mode.IDLE:
                 self.x_prev.append(self.x)
                 self.y_prev.append(self.y)
                 self.theta_prev.append(self.theta)
 
-            if self.mode == Mode.IDLE:
-                    self.replan()
+	    if self.mode == Mode.IDLE:
+	            self.replan()
 
-            elif self.mode == Mode.ALIGN:
-                if self.aligned():
-                    self.current_plan_start_time = rospy.get_rostime()
-                    self.switch_mode(Mode.MOVE)
-            elif self.mode == Mode.MOVE:
-                if self.at_goal():
-                    self.switch_mode(Mode.IDLE) 
-                elif not self.close_to_plan_start():
-                    rospy.loginfo("Replanning because far from start")
-                    self.replan()
-                elif (
-                    rospy.get_rostime() - self.current_plan_start_time
-                ).to_sec() > self.current_plan_duration:
-                    rospy.loginfo("Replanning because out of time")
-                    self.replan()  # we aren't near the goal but we thought we should have been, so replan
+	    elif self.mode == Mode.ALIGN:
+	        if self.aligned():
+	            self.current_plan_start_time = rospy.get_rostime()
+	            self.switch_mode(Mode.MOVE)
+	    elif self.mode == Mode.MOVE:
+	        if self.at_goal():
+	            self.switch_mode(Mode.IDLE) 
+	        elif not self.close_to_plan_start():
+	            rospy.loginfo("Replanning because far from start")
+	            self.replan()
+	        elif (
+	            rospy.get_rostime() - self.current_plan_start_time
+	        ).to_sec() > self.current_plan_duration:
+	            rospy.loginfo("Replanning because out of time")
+	            self.replan()  # we aren't near the goal but we thought we should have been, so replan
                     
             self.publish_control()
             rate.sleep()
