@@ -142,22 +142,21 @@ class Brain:
     def camera_explore(self, start=False):
         if start:
             self.camera.tilt_camera(0.5)
+            rospy.loginfo('Starting to explore world')
             self.explore_theta = self.theta
+        if abs(self.theta - self.explore_theta) > 1.96 * np.pi:
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0
+            cmd_vel.angular.z = 0.0
+            self.vel_publisher.publish(cmd_vel)
+            self.mode = Mode.IDLE
+            self.explore_theta = None  
+        else:
             cmd_vel = Twist()
             cmd_vel.linear.x = 0
             cmd_vel.angular.z = 0.2
             self.vel_publisher.publish(cmd_vel)
-        else:
-            rospy.loginfo('theta diff')
-            rospy.loginfo(abs(wrapToPi(self.theta - self.explore_theta)))
-            if abs(wrapToPi(self.theta - self.explore_theta)) < self.at_thresh_theta:
-                cmd_vel = Twist()
-                cmd_vel.linear.x = 0
-                cmd_vel.angular.z = 0
-                self.vel_publisher.publish(cmd_vel)
-                self.mode = Mode.IDLE
-                self.explore_theta = None
-
+                
 
     def goal_callback(self, data):
         if self.mode == Mode.INIT:
