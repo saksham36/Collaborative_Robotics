@@ -154,8 +154,11 @@ class Brain:
             self.camera.tilt_camera(0.5)
             rospy.loginfo('Starting to explore world')
             self.explore_theta = self.theta
+            self.prev_theta = None
+            
         rospy.loginfo(abs(self.theta - self.explore_theta))
-        if abs(self.theta - self.explore_theta) > 1.96 * np.pi:
+
+        if self.prev_theta and self.prev_theta - self.theta > 0 and abs(self.theta - self.explore_theta) < 0.1:
             cmd_vel = Twist()
             cmd_vel.linear.x = 0
             cmd_vel.angular.z = 0.0
@@ -167,6 +170,8 @@ class Brain:
             cmd_vel.linear.x = 0
             cmd_vel.angular.z = 0.2
             self.vel_publisher.publish(cmd_vel)
+
+        self.prev_theta = self.theta
                 
 
     def goal_callback(self, data):
