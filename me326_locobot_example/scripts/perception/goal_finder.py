@@ -9,8 +9,11 @@ from visualization_msgs.msg import Marker
 import yaml
 import numpy as np
 from occupancy_grid import CubeColor
+import rospkg
+import os
 
-CONFIG_FILE = "../config.yaml"
+rp = rospkg.RosPack()
+CONFIG_FILE = os.path.join(rp.get_path("me326_locobot_example"), "scripts", "config.yaml")
 TEAM = "team_2"
 
 class GoalFinder:
@@ -51,7 +54,10 @@ class GoalFinder:
         # Find closest cube to robot
         cubes = np.where((grid != 0) & (grid != 100))
         cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
-        closest_cube = np.argmin(np.linalg.norm(cubes - robot_pos, axis=1))
+        try:
+            closest_cube = np.argmin(np.linalg.norm(cubes - robot_pos, axis=1))
+        except:
+            return
         cube_pos = cubes[closest_cube]
         x,y = self.get_xy_from_cell_index(cube_pos)
         self.publish_goal(x,y)

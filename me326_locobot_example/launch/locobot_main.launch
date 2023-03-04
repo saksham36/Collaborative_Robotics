@@ -2,5 +2,6 @@
 <launch>
     <group ns="locobot">
         <node type="brain.py" name="locobot_brain" pkg="me326_locobot_example" respawn="false" output="screen"/>
+        <node type="goal_finder.py" name="locobot_goal_finder" pkg="me326_locobot_example" respawn="false" output="screen"/>
     </group>
 </launch>

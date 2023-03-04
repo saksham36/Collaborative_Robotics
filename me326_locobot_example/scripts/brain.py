@@ -4,7 +4,6 @@ from enum import Enum
 import rospy
 from nav_msgs.msg import OccupancyGrid, Path
 from controllers.trajectory_controller import TrajectoryController
-from controllers.pose_controller import PoseController
 from controllers.heading_controller import HeadingController
 from geometry_msgs.msg import Twist, Pose2D, PoseStamped
 import tf
@@ -13,17 +12,38 @@ import numpy as np
 import cv2
 from utils.utils import wrapToPi, StochOccupancyGrid2D
 from planner.astar import AStar, compute_smoothed_traj
+from std_msgs.msg import Float64
 
 class Mode(Enum):
     IDLE = 0
-    ALIGN = 1
-    MOVE = 2
-    PARK = 3
+    INIT = 1
+    ALIGN = 2
+    MOVE = 3
+    PICK = 4
+    DROP = 5
+
+
+class OrientCamera(object):
+	"""docstring for OrientCamera"""
+	def __init__(self, tilt_topic = "/locobot/tilt_controller/command", pan_topic = "/locobot/pan_controller/command"):		
+		self.orient_pub = rospy.Publisher(tilt_topic, Float64, queue_size=1, latch=True)
+		self.pan_pub = rospy.Publisher(pan_topic, Float64, queue_size=1, latch=True)
+
+	def tilt_camera(self,angle=0.5):
+		msg = Float64()
+		msg.data = angle
+		self.orient_pub.publish(msg)
+		# print("cause orientation, msg: ", msg)
+
+	def pan_camera(self,angle=0.5):
+		msg = Float64()
+		msg.data = angle
+		self.pan_pub.publish(msg)
 
 class Brain:
     def __init__(self):
         rospy.init_node("locobot_brain", anonymous=True)
-        self.mode = Mode.IDLE
+        self.mode = Mode.INIT
 
         # current state
         self.x = 0.0
@@ -34,6 +54,9 @@ class Brain:
         self.x_g = None
         self.y_g = None
         self.theta_g = None
+
+        # camera goal orientation
+        self.explore_theta = None
 
         self.th_init = 0.0
         self.robot_dims = (2, 2)
@@ -67,9 +90,8 @@ class Brain:
         self.theta_start_thresh = 0.05
         self.start_pos_thresh = 0.15
 
-        # threshold at which navigator switches from trajectory to pose control
-        self.near_thresh = 0.2
-        self.at_thresh = 0.05
+        # threshold at which to stop moving
+        self.at_thresh = 0.43
         self.at_thresh_theta = 0.05
 
         # trajectory smoothing
@@ -87,7 +109,6 @@ class Brain:
 
         # controllers
         self.traj_controller = TrajectoryController(self.kpx, self.kpy, self.kdx, self.kdy, self.v_max, self.om_max)
-        self.pose_controller = PoseController(0.0, 0.0, 0.0, self.v_max, self.om_max)
         self.heading_controller = HeadingController(self.kp_th, self.om_max)
 
         # publishers
@@ -106,6 +127,8 @@ class Brain:
         self.y_prev = deque([], maxlen = self.max_len)
         self.theta_prev = deque([], maxlen = self.max_len)
 
+        self.camera = OrientCamera()
+
     def get_current_plan_time(self):
         t = (rospy.get_rostime() - self.current_plan_start_time).to_sec()
         return max(0.0, t)  # clip negative time to 0
@@ -114,14 +137,35 @@ class Brain:
     def snap_to_grid(self, x, y):
         x_index = self.dilated_occupancy.info.resolution * int(x/self.dilated_occupancy.info.resolution)
         y_index = self.dilated_occupancy.info.resolution * int(y/self.dilated_occupancy.info.resolution)
-        return x_index, y_index
+        return (x_index, y_index)
+    
+    def camera_explore(self, start=False):
+        if start:
+            self.camera.tilt_camera(0.5)
+            self.explore_theta = self.theta
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0
+            cmd_vel.angular.z = 0.2
+            self.vel_publisher.publish(cmd_vel)
+        else:
+            if abs(wrapToPi(self.theta - self.explore_theta)) < self.at_thresh_theta:
+                cmd_vel = Twist()
+                cmd_vel.linear.x = 0
+                cmd_vel.angular.z = 0
+                self.vel_publisher.publish(cmd_vel)
+                self.mode = Mode.IDLE
+                self.explore_theta = None
+
 
     def goal_callback(self, data):
-        if data.x != self.x_g or data.y != self.y_g or data.theta != self.theta_g:
-            self.x_g = data.x
-            self.y_g = data.y
-            self.theta_g = data.theta
-            self.replan()
+        if self.x_g is not None:
+            if self.mode != Mode.IDLE or  self.mode == Mode.IDLE and np.isclose(data.x, self.x_g) and np.isclose(data.y, self.y_g):
+                return
+        self.x_g = data.x
+        self.y_g = data.y
+        self.theta_g = data.theta
+        rospy.loginfo('Received Goal')
+        self.replan()
 
     def map_callback(self, msg):
         self.map_width = msg.info.width
@@ -129,14 +173,13 @@ class Brain:
         self.map_resolution = msg.info.resolution
         self.map_origin = (msg.info.origin.position.x, msg.info.origin.position.y)
         self.map_metadata = msg.info
-        
-        #if len(self.map_probs) == len(msg.data) and np.isclose(self.map_probs, msg.data, atol=1e-5).all() and len(self.dilated_occupancy.data) > 0:
-            #return
-
         self.map_probs = msg.data
 
         self.dilate_map()
         self.dilated_map_pub.publish(self.dilated_occupancy)
+        
+        if len(self.map_probs) == len(msg.data) and np.isclose(self.map_probs, msg.data, atol=1e-5).all() and len(self.dilated_occupancy.data) > 0:
+            return
 
         if self.x_g is not None:
             # if we have a goal to plan to, replan
@@ -161,7 +204,7 @@ class Brain:
             self.map_origin[1],
             3,
             self.dilated_occupancy.data,
-            0.5
+            0.7
         )
 
     def near_goal(self):
@@ -212,11 +255,7 @@ class Brain:
         """
         t = self.get_current_plan_time()
 
-        if self.mode == Mode.PARK:
-            V, om = self.pose_controller.compute_control(
-                self.x, self.y, self.theta, t
-            )
-        elif self.mode == Mode.MOVE:
+        if self.mode == Mode.MOVE:
             V, om = self.traj_controller.compute_control(
                 self.x, self.y, self.theta, t
             )
@@ -243,14 +282,9 @@ class Brain:
         # Attempt to plan a path
         state_min = self.snap_to_grid(-self.plan_horizon, -self.plan_horizon)
         state_max = self.snap_to_grid(self.plan_horizon, self.plan_horizon)
-        state_min[0] += self.dilated_occupancy.info.origin.position.x
-        state_min[1] += self.dilated_occupancy.info.origin.position.y
-        state_max[0] += self.dilated_occupancy.info.origin.position.x
-        state_max[1] += self.dilated_occupancy.info.origin.position.y
         x_init = self.snap_to_grid(self.x, self.y)
         self.plan_start = x_init
         x_goal = self.snap_to_grid(self.x_g, self.y_g)
-        origin = self.snap_to_grid(self.dilated_occupancy.info.origin.position.x, self.dilated_occupancy.info.origin.position.y)
         
         problem = AStar(
             state_min,
@@ -258,8 +292,7 @@ class Brain:
             x_init,
             x_goal,
             self.occupancy,
-            self.dilated_occupancy.info.resolution,
-            origin,
+            self.dilated_occupancy.info.resolution
         )
 
         success = problem.solve()
@@ -272,9 +305,9 @@ class Brain:
         planned_path = problem.path
 
         # Check whether path is too short
-        if len(planned_path) < 4:
-            rospy.loginfo("Path too short to track")
-            self.switch_mode(Mode.PARK)
+        if len(planned_path) < 6:
+            rospy.loginfo("Path too short")
+            self.switch_mode(Mode.IDLE)
             return
 
         # Smooth and generate a trajectory
@@ -300,7 +333,6 @@ class Brain:
 
         # Otherwise follow the new plan
         self.publish_planned_path(traj_new, self.nav_planned_path_pub)
-        self.pose_controller.load_goal(self.x_g, self.y_g, self.theta_g)
         self.traj_controller.load_traj(t_new, traj_new)
 
         self.current_plan_start_time = rospy.get_rostime()
@@ -341,21 +373,25 @@ class Brain:
                 print(e)
                 pass
 
+            if self.mode == Mode.INIT:
+                if self.explore_theta is None:
+                    self.camera_explore(start=True)
+
             if self.mode != Mode.IDLE:
                 self.x_prev.append(self.x)
                 self.y_prev.append(self.y)
                 self.theta_prev.append(self.theta)
 
             if self.mode == Mode.IDLE:
-                pass
+                    self.replan()
 
             elif self.mode == Mode.ALIGN:
                 if self.aligned():
                     self.current_plan_start_time = rospy.get_rostime()
                     self.switch_mode(Mode.MOVE)
             elif self.mode == Mode.MOVE:
-                if self.near_goal():
-                    self.switch_mode(Mode.PARK)
+                if self.at_goal():
+                    self.switch_mode(Mode.IDLE) 
                 elif not self.close_to_plan_start():
                     rospy.loginfo("Replanning because far from start")
                     self.replan()
@@ -364,15 +400,8 @@ class Brain:
                 ).to_sec() > self.current_plan_duration:
                     rospy.loginfo("Replanning because out of time")
                     self.replan()  # we aren't near the goal but we thought we should have been, so replan
-            elif self.mode == Mode.PARK:
-                if self.at_goal():
-                    # forget about goal
-                    self.x_g = None
-                    self.y_g = None
-                    self.theta_g = None
-                    self.switch_mode(Mode.IDLE)
                     
-            #self.publish_control()
+            self.publish_control()
             rate.sleep()
 
     def shutdown_callback(self):
