@@ -64,8 +64,10 @@ class GoalFinder:
 
     def publish_goal(self, x, y):
         goal = Pose2D()
-        goal.x = x
-        goal.y = y
+        # goal.x = x
+        # goal.y = y
+        goal.x = 1
+        goal.y = 1
         (_,rotation) = self.tf.lookupTransform('locobot/odom', \
             'locobot/base_link', rospy.Time(0))
         euler = euler_from_quaternion(rotation)

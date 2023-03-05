@@ -124,7 +124,7 @@ class Brain:
         rospy.Subscriber("/map", OccupancyGrid, self.map_callback)
         rospy.Subscriber("/locobot/goal", Pose2D, self.goal_callback)
 
-        # Previous state
+        # previous state
         self.max_len = 50
         self.x_prev = deque([], maxlen = self.max_len)
         self.y_prev = deque([], maxlen = self.max_len)
@@ -322,9 +322,9 @@ class Brain:
         planned_path = problem.path
 
         # Check whether path is too short
-        if len(planned_path) < 6:
+        if len(planned_path) < 4:
             rospy.loginfo("Path too short")
-            self.switch_mode(Mode.IDLE)
+            self.switch_mode(Mode.PICK)
             return
 
         # Smooth and generate a trajectory
