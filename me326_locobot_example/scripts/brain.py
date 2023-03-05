@@ -5,7 +5,7 @@ import rospy
 from nav_msgs.msg import OccupancyGrid, Path
 from controllers.trajectory_controller import TrajectoryController
 from controllers.heading_controller import HeadingController
-from geometry_msgs.msg import Twist, Pose2D, PoseStamped
+from geometry_msgs.msg import Twist, Pose2D, PoseStamped, PointStamped
 import tf
 from collections import deque
 import numpy as np
@@ -46,7 +46,8 @@ class OrientCamera(object):
 class Brain:
     def __init__(self):
         rospy.init_node("locobot_brain", anonymous=True)
-        self.mode = Mode.INIT
+        self.mode = None
+        self.switch_mode(Mode.INIT)
 
         # current state
         self.x = 0.0
@@ -60,6 +61,7 @@ class Brain:
 
         # camera goal orientation
         self.explore_theta = None
+        self.total = None
 
         self.th_init = 0.0
         self.robot_dims = (2, 2)
@@ -157,13 +159,13 @@ class Brain:
             self.prev_theta = self.theta
             self.total = 0
  
-        if self.total >= 2 * np.pi:
+        if self.total is None or self.total >= 2 * np.pi: # TODO: Delete is None condition. Purely for debug
             cmd_vel = Twist()
             cmd_vel.linear.x = 0
             cmd_vel.angular.z = 0.0
             self.vel_publisher.publish(cmd_vel)
             rospy.loginfo("Finished exploring world")
-            self.mode = Mode.IDLE
+            self.switch_mode(Mode.IDLE)
             self.explore_theta = None
             self.total = 0
        
@@ -391,7 +393,7 @@ class Brain:
 
             if self.mode == Mode.INIT:
                 if self.explore_theta is None:
-                    self.camera_explore(start=True)
+                    self.camera_explore(start=False)
                 else:
                     self.camera_explore()
                 rate.sleep()
@@ -420,17 +422,33 @@ class Brain:
                     self.replan()  # we aren't near the goal but we thought we should have been, so replan
 
             elif self.mode == Mode.PICK:
+                self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
+                aux=PointStamped()
+                # aux is an auxiliary point in the odom frame                
+                aux.header.frame_id = "/locobot/odom"
+                aux.header.stamp =rospy.Time(0)
+                aux.point.x=self.x_g
+                aux.point.y=self.y_g
+                aux.point.z=0.01 # To prevent the gripper from touching the ground
+                pos_in_arm=self.trans_listener.transformPoint("/locobot/base_link",aux)
+
+                # p is the goal where the gripper should be in base_link frame
                 p = PoseStamped()
                 p.header.frame_id = "locobot/base_link"
-                p.pose.position.x = self.x_g
-                p.pose.position.y = self.y_g
-                p.pose.position.z = 0.1
-                quat = tf.transformations.quaternion_from_euler(0, self.theta_g, 0)
-                p.pose.orientation.x = quat[0]
-                p.pose.orientation.y = quat[1]
-                p.pose.orientation.z = quat[2]
-                p.pose.orientation.w = quat[3]
-                self.move_arm_object.move_gripper_down_to_grasp_callback(p)
+                # x_g, y_g are the coordinates of the cube in 2-D
+                p.pose.position.x = pos_in_arm.point.x # self.x_g
+                p.pose.position.y = pos_in_arm.point.y # self.y_g
+                p.pose.position.z - pos_in_arm.point.z # 0.02 # To prevent the gripper from touching the ground
+
+                # quat = tf.transformations.quaternion_from_euler(0, self.theta_g, 0)
+                p.pose.orientation.x = 0#quat[0]
+                p.pose.orientation.y = 0#quat[1]
+                p.pose.orientation.z = 0#quat[2]
+                p.pose.orientation.w = 0#quat[3]
+                rospy.loginfo("Moving to pick up cube")
+                rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
+                rospy.loginfo("Goal: {}".format(p))
+                self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
                 self.switch_mode(Mode.IDLE)
                     
             self.publish_control()

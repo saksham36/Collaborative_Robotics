@@ -102,22 +102,34 @@ class MoveLocobotArm(object):
 
     def move_gripper_down_to_grasp_callback(self, goal):
         try:
-            self.pose_goal.position.x = goal.point.x
-            self.pose_goal.position.y = goal.point.y
-            self.pose_goal.position.z = goal.point.z
-            self.pose_goal.orientation.x = goal.orientation.x
-            self.pose_goal.orientation.y = goal.orientation.y
-            self.pose_goal.orientation.z = goal.orientation.z
-            self.pose_goal.orientation.w = goal.orientation.w
+            self.pose_goal.position.x = goal.pose.position.x
+            self.pose_goal.position.y = goal.pose.position.y
+            self.pose_goal.position.z = goal.pose.position.z
+            # self.pose_goal.orientation.x = goal.pose.orientation.x
+            # self.pose_goal.orientation.y = goal.pose.orientation.y
+            # self.pose_goal.orientation.z = goal.pose.orientation.z
+            # self.pose_goal.orientation.w = goal.pose.orientation.w
+            v = np.matrix([0,1,0]) #pitch about y-axis
+            th = 10*np.pi/180. #pitch by 45deg
+            #note that no rotation is th= 0 deg
+
+            self.pose_goal.orientation.x = v.item(0)*np.sin(th/2)
+            self.pose_goal.orientation.y = v.item(1)*np.sin(th/2)
+            self.pose_goal.orientation.z = v.item(2)*np.sin(th/2)
+            self.pose_goal.orientation.w = np.cos(th/2)
             # publish a marker to the goal
             self.marker_arm()
+            rospy.loginfo("Setting pose target")
             self.arm_move_group.set_pose_target(self.pose_goal)
             # now we call the planner to compute and execute the plan
+            rospy.loginfo("Planning to pose target")
             self.arm_move_group.go(wait=True)
             # Calling `stop()` ensures that there is no residual movement
+            rospy.loginfo("Stopping arm movement")
             self.arm_move_group.stop()
             # It is always good to clear your targets after planning with poses.
             # Note: there is no equivalent function for clear_joint_value_targets()
+            rospy.loginfo("Clearing pose targets")
             self.arm_move_group.clear_pose_targets()
             self.open_gripper()
             self.close_gripper()
