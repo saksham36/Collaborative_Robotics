@@ -5,14 +5,17 @@ import rospy
 from nav_msgs.msg import OccupancyGrid, Path
 from controllers.trajectory_controller import TrajectoryController
 from controllers.heading_controller import HeadingController
-from geometry_msgs.msg import Twist, Pose2D, PoseStamped
+from geometry_msgs.msg import Twist, Pose2D, PoseStamped, PointStamped
 import tf
 from collections import deque
 import numpy as np
 import cv2
 from utils.utils import wrapToPi, StochOccupancyGrid2D
+from utils.arm import MoveLocobotArm
 from planner.astar import AStar, compute_smoothed_traj
 from std_msgs.msg import Float64
+import moveit_commander
+import sys
 
 class Mode(Enum):
     IDLE = 0
@@ -43,7 +46,8 @@ class OrientCamera(object):
 class Brain:
     def __init__(self):
         rospy.init_node("locobot_brain", anonymous=True)
-        self.mode = Mode.INIT
+        self.mode = None
+        self.switch_mode(Mode.INIT)
 
         # current state
         self.x = 0.0
@@ -57,6 +61,7 @@ class Brain:
 
         # camera goal orientation
         self.explore_theta = None
+        self.total = None
 
         self.th_init = 0.0
         self.robot_dims = (2, 2)
@@ -91,7 +96,7 @@ class Brain:
         self.start_pos_thresh = 0.15
 
         # threshold at which to stop moving
-        self.at_thresh = 0.43
+        self.at_thresh = 0.33
         self.at_thresh_theta = 0.05
 
         # trajectory smoothing
@@ -121,13 +126,20 @@ class Brain:
         rospy.Subscriber("/map", OccupancyGrid, self.map_callback)
         rospy.Subscriber("/locobot/goal", Pose2D, self.goal_callback)
 
-        # Previous state
+        # previous state
         self.max_len = 50
         self.x_prev = deque([], maxlen = self.max_len)
         self.y_prev = deque([], maxlen = self.max_len)
         self.theta_prev = deque([], maxlen = self.max_len)
-
+        
+        # Camera
         self.camera = OrientCamera()
+        
+        # Arm
+        moveit_commander.roscpp_initialize(sys.argv)
+        self.move_arm_obj = MoveLocobotArm(moveit_commander=moveit_commander)
+        self.move_arm_obj.display_moveit_info()
+        self.move_arm_obj.move_arm_down_for_camera()
 
     def get_current_plan_time(self):
         t = (rospy.get_rostime() - self.current_plan_start_time).to_sec()
@@ -142,34 +154,38 @@ class Brain:
     def camera_explore(self, start=False):
         if start:
             self.camera.tilt_camera(0.5)
+            rospy.loginfo('Starting to explore world')
             self.explore_theta = self.theta
+            self.prev_theta = self.theta
+            self.total = 0
+ 
+        if self.total is None or self.total >= 2 * np.pi: # TODO: Delete is None condition. Purely for debug
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0
+            cmd_vel.angular.z = 0.0
+            self.vel_publisher.publish(cmd_vel)
+            rospy.loginfo("Finished exploring world")
+            self.switch_mode(Mode.IDLE)
+            self.explore_theta = None
+            self.total = 0
+       
+        else:
             cmd_vel = Twist()
             cmd_vel.linear.x = 0
             cmd_vel.angular.z = 0.2
             self.vel_publisher.publish(cmd_vel)
-        else:
-            rospy.loginfo('theta diff')
-            rospy.loginfo(abs(wrapToPi(self.theta - self.explore_theta)))
-            if abs(wrapToPi(self.theta - self.explore_theta)) < self.at_thresh_theta:
-                cmd_vel = Twist()
-                cmd_vel.linear.x = 0
-                cmd_vel.angular.z = 0
-                self.vel_publisher.publish(cmd_vel)
-                self.mode = Mode.IDLE
-                self.explore_theta = None
 
+        self.total += abs(abs(self.prev_theta) - abs(self.theta))
+        self.prev_theta = self.theta
+                
 
     def goal_callback(self, data):
-        if self.mode == Mode.INIT:
-            return
-        if self.x_g is not None:
-            if self.mode != Mode.IDLE or  self.mode == Mode.IDLE and np.isclose(data.x, self.x_g) and np.isclose(data.y, self.y_g):
-                return
-        self.x_g = data.x
-        self.y_g = data.y
-        self.theta_g = data.theta
-        rospy.loginfo('Received Goal')
-        self.replan()
+        if self.x_g is None and self.mode != Mode.INIT:
+            self.x_g = data.x
+            self.y_g = data.y
+            self.theta_g = data.theta
+            rospy.loginfo('Received Goal')
+            self.replan()
 
     def map_callback(self, msg):
         self.map_width = msg.info.width
@@ -268,7 +284,6 @@ class Brain:
                 self.x, self.y, self.theta, t
             )
         else:
-            # IDLE
             V = 0.0
             om = 0.0
 
@@ -309,9 +324,9 @@ class Brain:
         planned_path = problem.path
 
         # Check whether path is too short
-        if len(planned_path) < 6:
+        if len(planned_path) < 4:
             rospy.loginfo("Path too short")
-            self.switch_mode(Mode.IDLE)
+            self.switch_mode(Mode.PICK)
             return
 
         # Smooth and generate a trajectory
@@ -360,7 +375,7 @@ class Brain:
             # try to get state information to update self.x, self.y, self.theta
             try:
                 (translation, rotation) = self.trans_listener.lookupTransform(
-                    "/locobot/odom", "/locobot/base_footprint", rospy.Time(0)
+                    "/locobot/odom", "/locobot/base_link", rospy.Time(0)
                 )
                 self.x = translation[0]
                 self.y = translation[1]
@@ -373,33 +388,30 @@ class Brain:
             ) as e:
                 self.current_plan = []
                 rospy.loginfo("Navigator: waiting for state info")
-                # self.switch_mode(Mode.IDLE)
-                print(e)
-                pass
+                rate.sleep()
+                continue
 
             if self.mode == Mode.INIT:
                 if self.explore_theta is None:
-                    self.camera_explore(start=True)
+                    self.camera_explore(start=False)
                 else:
                     self.camera_explore()
                 rate.sleep()
                 continue
                 
-            if self.mode != Mode.IDLE:
+            if self.mode in [Mode.ALIGN, Mode.MOVE]:
                 self.x_prev.append(self.x)
                 self.y_prev.append(self.y)
                 self.theta_prev.append(self.theta)
 
-            if self.mode == Mode.IDLE:
-                self.replan()
-
-            elif self.mode == Mode.ALIGN:
+            if self.mode == Mode.ALIGN:
                 if self.aligned():
                     self.current_plan_start_time = rospy.get_rostime()
                     self.switch_mode(Mode.MOVE)
+
             elif self.mode == Mode.MOVE:
                 if self.at_goal():
-                    self.switch_mode(Mode.IDLE) 
+                    self.switch_mode(Mode.PICK)
                 elif not self.close_to_plan_start():
                     rospy.loginfo("Replanning because far from start")
                     self.replan()
@@ -408,6 +420,36 @@ class Brain:
                 ).to_sec() > self.current_plan_duration:
                     rospy.loginfo("Replanning because out of time")
                     self.replan()  # we aren't near the goal but we thought we should have been, so replan
+
+            elif self.mode == Mode.PICK:
+                self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
+                aux=PointStamped()
+                # aux is an auxiliary point in the odom frame                
+                aux.header.frame_id = "/locobot/odom"
+                aux.header.stamp =rospy.Time(0)
+                aux.point.x=self.x_g
+                aux.point.y=self.y_g
+                aux.point.z=0.01 # To prevent the gripper from touching the ground
+                pos_in_arm=self.trans_listener.transformPoint("/locobot/base_link",aux)
+
+                # p is the goal where the gripper should be in base_link frame
+                p = PoseStamped()
+                p.header.frame_id = "locobot/base_link"
+                # x_g, y_g are the coordinates of the cube in 2-D
+                p.pose.position.x = pos_in_arm.point.x # self.x_g
+                p.pose.position.y = pos_in_arm.point.y # self.y_g
+                p.pose.position.z - pos_in_arm.point.z # 0.02 # To prevent the gripper from touching the ground
+
+                # quat = tf.transformations.quaternion_from_euler(0, self.theta_g, 0)
+                p.pose.orientation.x = 0#quat[0]
+                p.pose.orientation.y = 0#quat[1]
+                p.pose.orientation.z = 0#quat[2]
+                p.pose.orientation.w = 0#quat[3]
+                rospy.loginfo("Moving to pick up cube")
+                rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
+                rospy.loginfo("Goal: {}".format(p))
+                self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
+                self.switch_mode(Mode.IDLE)
                     
             self.publish_control()
             rate.sleep()
