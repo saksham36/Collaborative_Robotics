@@ -21,9 +21,11 @@ class Mode(Enum):
     IDLE = 0
     INIT = 1
     ALIGN = 2
-    MOVE = 3
-    PICK = 4
-    DROP = 5
+    GOAL_ALIGN = 3
+    MOVE = 4
+    PICK = 5
+    DROP = 6
+    PARK = 7
 
 
 class OrientCamera(object):
@@ -61,7 +63,6 @@ class Brain:
 
         # camera goal orientation
         self.explore_theta = None
-        self.total = None
 
         self.th_init = 0.0
         self.robot_dims = (2, 2)
@@ -96,7 +97,7 @@ class Brain:
         self.start_pos_thresh = 0.15
 
         # threshold at which to stop moving
-        self.at_thresh = 0.33
+        self.at_thresh = 0.6
         self.at_thresh_theta = 0.05
 
         # trajectory smoothing
@@ -159,7 +160,7 @@ class Brain:
             self.prev_theta = self.theta
             self.total = 0
  
-        if self.total is None or self.total >= 2 * np.pi: # TODO: Delete is None condition. Purely for debug
+        if self.total >= 2 * np.pi: # TODO: Delete is None condition. Purely for debug
             cmd_vel = Twist()
             cmd_vel.linear.x = 0
             cmd_vel.angular.z = 0.0
@@ -180,7 +181,7 @@ class Brain:
                 
 
     def goal_callback(self, data):
-        if self.x_g is None and self.mode != Mode.INIT:
+        if self.mode not in [Mode.INIT, Mode.PICK, Mode.PARK, Mode.MOVE, Mode.GOAL_ALIGN]:  # TODO: Check
             self.x_g = data.x
             self.y_g = data.y
             self.theta_g = data.theta
@@ -234,11 +235,19 @@ class Brain:
         )
 
     def at_goal(self):
+        # print(20*'*')
+        # rospy.loginfo("Position distance: %s", np.linalg.norm(np.array([self.x - self.x_g, self.y - self.y_g])))
         return (
             np.linalg.norm(np.array([self.x - self.x_g, self.y - self.y_g]))
             < self.at_thresh
-            and abs(wrapToPi(self.theta - self.theta_g)) < self.at_thresh_theta
         )
+    
+    def aligned_goal(self):
+        print(20*'*')
+        rospy.loginfo("Theta: %s", self.theta)
+        rospy.loginfo("Theta goal: %s", self.theta_g)
+        rospy.loginfo("Orientation distance: %s", abs(wrapToPi(self.theta - self.theta_g)))
+        return abs(wrapToPi(self.theta - self.theta_g)) < self.at_thresh_theta
 
     def aligned(self):
         return (
@@ -252,7 +261,11 @@ class Brain:
         )
         
     def switch_mode(self, new_mode):
+        print(20* "*")
+        print(20* "*")
         rospy.loginfo("Switching from %s -> %s", self.mode, new_mode)
+        print(20* "*")
+        print(20* "*")
         self.mode = new_mode
 
     def publish_planned_path(self, path, publisher):
@@ -279,7 +292,7 @@ class Brain:
             V, om = self.traj_controller.compute_control(
                 self.x, self.y, self.theta, t
             )
-        elif self.mode == Mode.ALIGN:
+        elif self.mode in [Mode.ALIGN, Mode.GOAL_ALIGN]:
             V, om = self.heading_controller.compute_control(
                 self.x, self.y, self.theta, t
             )
@@ -295,6 +308,7 @@ class Brain:
     def replan(self,):
         # Make sure we have a map
         if not self.occupancy:
+            rospy.loginfo("No map yet, waiting")
             self.switch_mode(Mode.IDLE)
             return
         
@@ -322,11 +336,13 @@ class Brain:
         rospy.loginfo("Planning succeeded")
 
         planned_path = problem.path
-
+        rospy.loginfo("Planned path length: %d", len(planned_path))
         # Check whether path is too short
         if len(planned_path) < 4:
             rospy.loginfo("Path too short")
             self.switch_mode(Mode.PICK)
+            self.publish_control()
+            
             return
 
         # Smooth and generate a trajectory
@@ -374,6 +390,7 @@ class Brain:
         while not rospy.is_shutdown():
             # try to get state information to update self.x, self.y, self.theta
             try:
+                # Getting trans, rotation wrt odom
                 (translation, rotation) = self.trans_listener.lookupTransform(
                     "/locobot/odom", "/locobot/base_link", rospy.Time(0)
                 )
@@ -393,7 +410,7 @@ class Brain:
 
             if self.mode == Mode.INIT:
                 if self.explore_theta is None:
-                    self.camera_explore(start=False)
+                    self.camera_explore(start=True)
                 else:
                     self.camera_explore()
                 rate.sleep()
@@ -409,9 +426,16 @@ class Brain:
                     self.current_plan_start_time = rospy.get_rostime()
                     self.switch_mode(Mode.MOVE)
 
+            # elif self.mode == Mode.GOAL_ALIGN:
+            #     if self.aligned_goal():
+            #         self.switch_mode(Mode.PICK)
+
             elif self.mode == Mode.MOVE:
-                if self.at_goal():
+                if self.at_goal(): 
+                    # if self.aligned_goal():
                     self.switch_mode(Mode.PICK)
+                    # else:
+                    #     self.switch_mode(Mode.GOAL_ALIGN)
                 elif not self.close_to_plan_start():
                     rospy.loginfo("Replanning because far from start")
                     self.replan()
@@ -429,7 +453,7 @@ class Brain:
                 aux.header.stamp =rospy.Time(0)
                 aux.point.x=self.x_g
                 aux.point.y=self.y_g
-                aux.point.z=0.01 # To prevent the gripper from touching the ground
+                aux.point.z=0.2 # To prevent the gripper from touching the ground
                 pos_in_arm=self.trans_listener.transformPoint("/locobot/base_link",aux)
 
                 # p is the goal where the gripper should be in base_link frame
@@ -449,8 +473,8 @@ class Brain:
                 rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                 rospy.loginfo("Goal: {}".format(p))
                 self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
-                self.switch_mode(Mode.IDLE)
-                    
+                self.switch_mode(Mode.PARK)
+      
             self.publish_control()
             rate.sleep()
 
@@ -464,19 +488,3 @@ if __name__ == "__main__":
     brain = Brain()
     rospy.on_shutdown(brain.shutdown_callback)
     brain.run()
-
-
-        
-
-
-
-
-
-
-
-
-
-        
-
-
-
