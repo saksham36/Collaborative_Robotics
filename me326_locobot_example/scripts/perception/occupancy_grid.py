@@ -63,6 +63,8 @@ class OccupancyGridNode(object):
         self.tf = tf.TransformListener()
 
         rospy.loginfo("Successfully initialized Occupancy Grid node!")
+
+        self.cube_thresh = 0.1
     
     #=====================================
     #         Gets parameters from
@@ -213,10 +215,19 @@ class OccupancyGridNode(object):
             return x_index, y_index
         return None
     
+    def is_cell_free(self, grid, x, y):
+        num_cells = self.cube_thresh/grid.info.resolution
+        for ii in range(-num_cells, num_cells+1):
+            for jj in range(-num_cells, num_cells+1):
+                if self.is_in_gridmap([x+ii, y+jj]):
+                    if grid.data[(y+jj)*grid.info.width + (x+ii)] != 0:
+                        return False
+    
     def update_grid(self, grid, x, y, value):
         x_index, y_index = self.get_cell_index_from_xy(x, y)
-        if self.is_in_gridmap([x_index, y_index]):
-            grid.data[y_index*grid.info.width + x_index] = value
+        if self.is_cell_free(grid, x_index, y_index):
+            if self.is_in_gridmap([x_index, y_index]):
+                grid.data[y_index*grid.info.width + x_index] = value
             
     def transform_point(self, org_frame, dest_frame, point, ts):
         self.tf.waitForTransform(org_frame, dest_frame, ts, rospy.Duration(4.0))
