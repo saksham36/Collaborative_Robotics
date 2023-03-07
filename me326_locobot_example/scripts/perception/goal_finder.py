@@ -3,6 +3,7 @@
 import rospy
 import tf 
 from tf.transformations import euler_from_quaternion
+from std_msgs.msg import Bool
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Pose2D, Point
 import visualization_msgs.msg
@@ -32,6 +33,8 @@ class GoalFinder:
         self.load_config()
         self.perception_grid = None
 
+        self.station_pub_flag = False
+
         # Goal publisher
         self.goal_pub = rospy.Publisher('/locobot/goal', Pose2D, queue_size=10)
         self.goal_marker_pub = rospy.Publisher('/locobot/marker_goal', Marker, queue_size=1)
@@ -39,6 +42,8 @@ class GoalFinder:
 
         # Perception Grid subscriber
         self.cube_sub = rospy.Subscriber('/perception_grid', OccupancyGrid, self.perception_callback)
+        self.ask_for_station_pub = rospy.Subscriber('/locobot/ask_for_station', Bool, self.ask_for_station_callback)
+        
  
         
     def load_config(self):
@@ -71,6 +76,11 @@ class GoalFinder:
             self.stations_marker_pub[i]['msg'].pose.position.y = station[1]
             self.stations_marker_pub[i]['msg'].pose.position.z = 0.0
 
+    def ask_for_station_callback(self, msg):
+            station = self.config['stations'][0] #TODO: Station selection algo
+            self.station_pub_flag = True
+            self.publish_goal(station[0], station[1], False)
+
     def perception_callback(self, msg):
         # rospy.loginfo("Received perception grid")
         self.perception_grid = msg
@@ -100,19 +110,24 @@ class GoalFinder:
             x,y = self.get_xy_from_cell_index(cube_pos)
             self.x_g = x
             self.y_g = y
-        self.publish_goal(self.x_g,self.y_g)
+        self.publish_goal(self.x_g,self.y_g, True)
         self.publish_stations()
         
     def publish_stations(self):
         for i in range(len(self.config['stations'])):
             self.stations_marker_pub[i]['marker_pub'].publish(self.stations_marker_pub[i]['msg'])
 
-    def publish_goal(self, x, y):
+    def publish_goal(self, x, y, from_perception=True):
         goal = Pose2D()
-        # goal.x = x
-        # goal.y = y
-        goal.x = 1
-        goal.y = 1
+        if self.station_pub_flag and from_perception == False:
+            rospy.loginfo("Publishing station as goal")
+            goal.x = self.x_g
+            goal.y = self.y_g
+        else:
+            # goal.x = x
+            # goal.y = y
+            goal.x = 1
+            goal.y = 1
         (_,rotation) = self.tf.lookupTransform('locobot/odom', \
             'locobot/base_link', rospy.Time(0))
         euler = euler_from_quaternion(rotation)

@@ -124,6 +124,37 @@ class MoveLocobotArm(object):
         # Publish the marker
         self.red_marker_arm_frame_publisher.publish(marker)
 
+    def move_gripper_down_to_drop_callback(self,goal):
+        try:
+            self.pose_goal.position.x = goal.pose.position.x
+            self.pose_goal.position.y = goal.pose.position.y
+            self.pose_goal.position.z = goal.pose.position.z
+            self.pose_goal.orientation.x = goal.pose.orientation.x
+            self.pose_goal.orientation.y = goal.pose.orientation.y
+            self.pose_goal.orientation.z = goal.pose.orientation.z
+            self.pose_goal.orientation.w = goal.pose.orientation.w
+
+            self.marker_arm()
+            rospy.loginfo("Setting pose target")
+            self.arm_move_group.set_pose_target(self.pose_goal)
+            # now we call the planner to compute and execute the plan
+            rospy.loginfo("Planning to pose target")
+            self.arm_move_group.plan()
+            rospy.loginfo("Moving to pose target")
+            self.arm_move_group.go(wait=True)
+            # Calling `stop()` ensures that there is no residual movement
+            rospy.loginfo("Stopping arm movement")
+            self.arm_move_group.stop()
+            # It is always good to clear your targets after planning with poses.
+            # Note: there is no equivaflent function for clear_joint_value_targets()
+            rospy.loginfo("Opening gripper")
+            self.open_gripper()
+            rospy.loginfo("Clearing pose targets")
+            self.arm_move_group.clear_pose_targets()
+            self.move_arm_down_for_camera()
+        except Exception as e:
+            print("Error Drop Read: ", e)
+
     def move_gripper_down_to_grasp_callback(self, goal):
         try:
             self.pose_goal.position.x = goal.pose.position.x
