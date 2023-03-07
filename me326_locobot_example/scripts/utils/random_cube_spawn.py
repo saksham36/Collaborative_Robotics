@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(base_path, '..'))
 COLORS = ["red", "green", "blue", "yellow"]
 
 def main(args):
-    with open('../templates/random_cube_spawn_template.launch', "r") as template:
+    with open('../../templates/random_cube_spawn_template.launch', "r") as template:
         filename = os.path.join(args.path, "{}.launch".format(args.filename))
         print("Writing file: ", filename)
         positions = set()
@@ -22,7 +22,7 @@ def main(args):
                          for c in range(args.num_cubes):
                              color = random.choice(COLORS)
                              while True:
-                                x, y = random.uniform(0, 1.7), random.uniform(0, 1.7)
+                                x, y = random.uniform(0, 3), random.uniform(0, 3)
                                 if tuple((x,y)) not in positions:
                                     positions.add((x,y))
                                     break
@@ -32,7 +32,7 @@ def main(args):
                          
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, help="Launch file path", default="../launch/")
+    parser.add_argument('--path', type=str, help="Launch file path", default="../../launch/")
     parser.add_argument('--filename', type=str, help="Launch file filename", default="random_cube_spawn")
     parser.add_argument('--num_cubes', type=int, help="Number of cubes to spawn", default=10)
 

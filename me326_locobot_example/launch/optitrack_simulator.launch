@@ -3,6 +3,6 @@
     <param name="frame_rate" value="0"/>
     <param name="publish_tf" value="true"/>
     <param name="fixed_frame_id" value="optitrack"/>
-    <rosparam param="model_list">["locobot", "locobot_2", "locobot_3", "spawn_6_cube"]</rosparam>
+    <rosparam param="model_list">["locobot", "locobot_2", "locobot_3", "spawn_9_cube"]</rosparam>
   </node>
 </launch>
