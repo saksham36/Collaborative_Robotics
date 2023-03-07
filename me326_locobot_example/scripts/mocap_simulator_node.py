@@ -58,7 +58,7 @@ class MocapSimulatorNode:
         self.frame_delay = 1/float(self.frame_rate)
 
         # self.fixed_frame_id = rospy.get_param('~fixed_frame_id', "optitrack")
-        self.fixed_frame_id = "locobot/base_link"
+        self.fixed_frame_id = "locobot/odom"
         self.model_list = rospy.get_param('~model_list', [])
 
     #=====================================
@@ -75,10 +75,10 @@ class MocapSimulatorNode:
         
         for model in self.model_list:
             rospy.loginfo("Initializing subject "+model)
-            self.model_pub.update({model : { "pose_stamped_pub" : rospy.Publisher("vrpn_client_node/"+model+"/pose", geometry_msgs.msg.PoseStamped, queue_size=100),
+            self.model_pub.update({model : { "pose_stamped_pub" : rospy.Publisher("vrpn_client_node/"+model+"/pose", geometry_msgs.msg.PoseStamped, queue_size=1),
                                              "pose_stamped_msg" : geometry_msgs.msg.PoseStamped(),
                                              }})
-            self.model_marker_pub.update({model : { "marker_pub" : rospy.Publisher("vrpn_client_node/"+model+"/marker", visualization_msgs.msg.Marker, queue_size=100),
+            self.model_marker_pub.update({model : { "marker_pub" : rospy.Publisher("vrpn_client_node/"+model+"/marker", visualization_msgs.msg.Marker, queue_size=1),
                                              "msg" : visualization_msgs.msg.Marker(),
                                              }})
             #init message headers
@@ -101,7 +101,9 @@ class MocapSimulatorNode:
             self.prev_time = curr_time
             for i in range(len(model_state_msg.name)):
                 for model in self.model_list:
-                    if model_state_msg.name[i] == model:
+                    rospy.loginfo("Model state: %s", model_state_msg.name[i])
+                    # rospy.loginfo("Model "+model+" found in Gazebo model state message!")
+                    if model_state_msg.name[i] == model or model_state_msg.name[i] == "red_cube_6":
                         #Get model pose from Gazebo message
                         self.model_pub[model]["pose_stamped_msg"].pose = model_state_msg.pose[i]
                         start = model_state_msg.pose[i].position

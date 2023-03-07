@@ -24,7 +24,6 @@ class StochOccupancyGrid2D(object):
     def is_free(self, state):
         # combine the probabilities of each cell by assuming independence
         # of each estimation
-        return True
         p_total = 1.0
         lower = -int(round((self.window_size-1)/2))
         upper = int(round((self.window_size-1)/2))

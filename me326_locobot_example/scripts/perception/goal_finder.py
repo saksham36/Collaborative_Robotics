@@ -33,6 +33,10 @@ class GoalFinder:
         self.goal_pub = rospy.Publisher('/locobot/goal', Pose2D, queue_size=10)
         self.goal_marker_pub = rospy.Publisher('/locobot/marker_goal', Marker, queue_size=1)
 
+        # TODO: THis is only for debugging. Set's the goal
+        self.x_g = None
+        self.y_g = None
+
     def load_config(self):
         with open(CONFIG_FILE, 'r') as f:
             config = yaml.safe_load(f)
@@ -59,8 +63,12 @@ class GoalFinder:
         except:
             return
         cube_pos = cubes[closest_cube]
-        x,y = self.get_xy_from_cell_index(cube_pos)
-        self.publish_goal(x,y)
+        if self.x_g is None or self.y_g is None: # TODO: This is only for picking 1 cube
+            x,y = self.get_xy_from_cell_index(cube_pos)
+            self.x_g = x
+            self.y_g = y
+        self.publish_goal(self.x_g,self.y_g)
+        
 
     def publish_goal(self, x, y):
         goal = Pose2D()
@@ -79,8 +87,8 @@ class GoalFinder:
         goal_marker.header.stamp = rospy.Time.now()
         goal_marker.type = Marker.ARROW
         goal_marker.action = Marker.ADD
-        goal_marker.pose.position.x = x
-        goal_marker.pose.position.y = y
+        goal_marker.pose.position.x = 1 # x
+        goal_marker.pose.position.y = 1 # y
         goal_marker.pose.position.z = 0.1
         goal_marker.pose.orientation.x = rotation[0]
         goal_marker.pose.orientation.y = rotation[1]

@@ -105,24 +105,26 @@ class MoveLocobotArm(object):
             self.pose_goal.position.x = goal.pose.position.x
             self.pose_goal.position.y = goal.pose.position.y
             self.pose_goal.position.z = goal.pose.position.z
-            # self.pose_goal.orientation.x = goal.pose.orientation.x
-            # self.pose_goal.orientation.y = goal.pose.orientation.y
-            # self.pose_goal.orientation.z = goal.pose.orientation.z
-            # self.pose_goal.orientation.w = goal.pose.orientation.w
-            v = np.matrix([0,1,0]) #pitch about y-axis
-            th = 10*np.pi/180. #pitch by 45deg
+            self.pose_goal.orientation.x = goal.pose.orientation.x
+            self.pose_goal.orientation.y = goal.pose.orientation.y
+            self.pose_goal.orientation.z = goal.pose.orientation.z
+            self.pose_goal.orientation.w = goal.pose.orientation.w
+            # v = np.matrix([0,1,0]) #pitch about y-axis
+            # th = 10*np.pi/180. #pitch by 45deg
             #note that no rotation is th= 0 deg
 
-            self.pose_goal.orientation.x = v.item(0)*np.sin(th/2)
-            self.pose_goal.orientation.y = v.item(1)*np.sin(th/2)
-            self.pose_goal.orientation.z = v.item(2)*np.sin(th/2)
-            self.pose_goal.orientation.w = np.cos(th/2)
+            # self.pose_goal.orientation.x = 0#v.item(0)*np.sin(th/2)
+            # self.pose_goal.orientation.y = 0#v.item(1)*np.sin(th/2)
+            # self.pose_goal.orientation.z = 0#v.item(2)*np.sin(th/2)
+            # self.pose_goal.orientation.w = 1 #np.cos(th/2)
             # publish a marker to the goal
             self.marker_arm()
             rospy.loginfo("Setting pose target")
             self.arm_move_group.set_pose_target(self.pose_goal)
             # now we call the planner to compute and execute the plan
             rospy.loginfo("Planning to pose target")
+            self.arm_move_group.plan()
+            rospy.loginfo("Moving to pose target")
             self.arm_move_group.go(wait=True)
             # Calling `stop()` ensures that there is no residual movement
             rospy.loginfo("Stopping arm movement")
