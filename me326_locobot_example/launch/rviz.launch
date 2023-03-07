@@ -1,0 +1,5 @@
+<launch>
+<!-- run the saved rviz environment -->
+<node type="rviz" name="rviz" pkg="rviz" args="-d $(find me326_locobot_example)/rviz/rviz_example_env.rviz" />
+
+</launch>
