@@ -5,6 +5,7 @@ import tf
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Pose2D, Point
+import visualization_msgs.msg
 from visualization_msgs.msg import Marker
 import yaml
 import numpy as np
@@ -22,21 +23,24 @@ class GoalFinder:
 
         self.tf = tf.TransformListener()
 
-        # Perception Grid subscriber
-        self.cube_sub = rospy.Subscriber('/perception_grid', OccupancyGrid, self.perception_callback)
+        # TODO: THis is only for debugging. Set's the goal
+        self.x_g = None
+        self.y_g = None
 
         self.config = {}
+        self.stations_marker_pub = {}
         self.load_config()
         self.perception_grid = None
 
         # Goal publisher
         self.goal_pub = rospy.Publisher('/locobot/goal', Pose2D, queue_size=10)
         self.goal_marker_pub = rospy.Publisher('/locobot/marker_goal', Marker, queue_size=1)
+        
 
-        # TODO: THis is only for debugging. Set's the goal
-        self.x_g = None
-        self.y_g = None
-
+        # Perception Grid subscriber
+        self.cube_sub = rospy.Subscriber('/perception_grid', OccupancyGrid, self.perception_callback)
+ 
+        
     def load_config(self):
         with open(CONFIG_FILE, 'r') as f:
             config = yaml.safe_load(f)
@@ -44,6 +48,28 @@ class GoalFinder:
         self.config['team_colors'] = [c for c in config[TEAM]]
         self.config['colors'] = [c for c in config['colors']]
         self.config['resources'] = np.array(config['resources'])
+
+        self.setup_station_pub()
+    
+    def setup_station_pub(self):
+        for i, station in enumerate(self.config['stations']):
+            self.stations_marker_pub.update({i : { "marker_pub" : rospy.Publisher("station/"+str(i)+"/marker", visualization_msgs.msg.Marker, queue_size=1),
+                                                   "msg" : visualization_msgs.msg.Marker(),
+                                                   }})
+            self.stations_marker_pub[i]['msg'].header.frame_id = "locobot/odom"
+            self.stations_marker_pub[i]['msg'].type = Marker.CUBE
+            self.stations_marker_pub[i]['msg'].action = Marker.ADD
+            self.stations_marker_pub[i]['msg'].scale.x = 0.1
+            self.stations_marker_pub[i]['msg'].scale.y = 0.1
+            self.stations_marker_pub[i]['msg'].scale.z = 0.1
+            self.stations_marker_pub[i]['msg'].color.a = 1.0
+            # Color: (1, 0, 0), (0, 1, 0), (0, 0, 1)
+            self.stations_marker_pub[i]['msg'].color.r = 1 if i%3==0 else 0 
+            self.stations_marker_pub[i]['msg'].color.g = 1 if (i+2)%3==0 else 0
+            self.stations_marker_pub[i]['msg'].color.b = 1 if (i+1)%3==0 else 0 
+            self.stations_marker_pub[i]['msg'].pose.position.x = station[0]
+            self.stations_marker_pub[i]['msg'].pose.position.y = station[1]
+            self.stations_marker_pub[i]['msg'].pose.position.z = 0.0
 
     def perception_callback(self, msg):
         self.perception_grid = msg
@@ -68,7 +94,11 @@ class GoalFinder:
             self.x_g = x
             self.y_g = y
         self.publish_goal(self.x_g,self.y_g)
+        self.publish_stations()
         
+    def publish_stations(self):
+        for i in range(len(self.config['stations'])):
+            self.stations_marker_pub[i]['marker_pub'].publish(self.stations_marker_pub[i]['msg'])
 
     def publish_goal(self, x, y):
         goal = Pose2D()
