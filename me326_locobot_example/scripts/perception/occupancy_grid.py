@@ -50,6 +50,7 @@ class OccupancyGridNode(object):
 
         self.occupancy_grid = OccupancyGrid()
         self.perception_grid = OccupancyGrid()
+        self.cube_thresh = 0.1
         
         # Initialize occupancy grid
         self.init_grids()
@@ -64,7 +65,7 @@ class OccupancyGridNode(object):
 
         rospy.loginfo("Successfully initialized Occupancy Grid node!")
 
-        self.cube_thresh = 0.1
+        
     
     #=====================================
     #         Gets parameters from

@@ -72,11 +72,13 @@ class GoalFinder:
             self.stations_marker_pub[i]['msg'].pose.position.z = 0.0
 
     def perception_callback(self, msg):
+        # rospy.loginfo("Received perception grid")
         self.perception_grid = msg
         grid = self.get_grid_as_np(self.perception_grid)
         try:
             robot_pos = self.get_robot_pos(grid)
         except:
+            rospy.loginfo("Robot not in grid")
             return
         self.mask_grid(grid)
 
@@ -89,7 +91,9 @@ class GoalFinder:
         cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
         try:
             closest_cube = np.argmin(np.linalg.norm(cubes - robot_pos, axis=1))
-        except:
+        except Exception as e:
+            rospy.loginfo("No cubes in grid")
+            rospy.loginfo("Error: " + str(e))
             return
         cube_pos = cubes[closest_cube]
         if self.x_g is None or self.y_g is None: # TODO: This is only for picking 1 cube
@@ -113,6 +117,7 @@ class GoalFinder:
             'locobot/base_link', rospy.Time(0))
         euler = euler_from_quaternion(rotation)
         goal.theta = euler[2]
+        # rospy.loginfo("Publishing goal: " + str(goal) + " to /locobot/goal")
         self.goal_pub.publish(goal)
 
         goal_marker = Marker()

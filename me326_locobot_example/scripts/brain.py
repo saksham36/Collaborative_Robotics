@@ -97,8 +97,8 @@ class Brain:
         self.start_pos_thresh = 0.15
 
         # threshold at which to stop moving
-        self.at_thresh = 0.6
-        self.at_thresh_theta = 0.05
+        self.at_thresh = 0.65
+        self.at_thresh_theta = 0.01
 
         # trajectory smoothing
         self.spline_alpha = 0.01
@@ -160,7 +160,7 @@ class Brain:
             self.prev_theta = self.theta
             self.total = 0
  
-        if self.total >= 2 * np.pi: # TODO: Delete is None condition. Purely for debug
+        if self.total >= 0.01:#2 * np.pi: # TODO: Delete is None condition. Purely for debug
             cmd_vel = Twist()
             cmd_vel.linear.x = 0
             cmd_vel.angular.z = 0.0
@@ -453,7 +453,7 @@ class Brain:
                 aux.header.stamp =rospy.Time(0)
                 aux.point.x=self.x_g
                 aux.point.y=self.y_g
-                aux.point.z=0.2 # To prevent the gripper from touching the ground
+                aux.point.z=0.1 # To prevent the gripper from touching the ground
                 pos_in_arm=self.trans_listener.transformPoint("/locobot/base_link",aux)
 
                 # p is the goal where the gripper should be in base_link frame
@@ -473,6 +473,7 @@ class Brain:
                 rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                 rospy.loginfo("Goal: {}".format(p))
                 self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
+                # self.move_arm_obj()
                 self.switch_mode(Mode.PARK)
       
             self.publish_control()

@@ -77,6 +77,30 @@ class MoveLocobotArm(object):
         # parameters if you have already set the pose or joint target for the group
         self.arm_move_group.go(joint_goal, wait=True)
 
+    def move_arm_slightly_up(self):
+        #start here
+        joint_goal = self.arm_move_group.get_current_joint_values()
+        #['waist', 'shoulder', 'elbow', 'forearm_roll', 'wrist_angle', 'wrist_rotate']
+        # joint_goal[0] = -0.1115207331248822 #waist
+        joint_goal[1]-= 1.57# 0.5313552376357276 #shoulder
+        joint_goal[2] += 1.48#1.058371284458718 #elbow
+        # joint_goal[3] = -0.05608022936825474 #forearm_roll
+        joint_goal[4] -= 0.52#0.9302728070281328 #wrist_angle
+        rospy.loginfo("joint_goal is: %s", joint_goal)
+        # joint_goal[5] = -0.14247350829385486 #wrist_rotate
+        # The go command can be called with joint values, poses, or without any
+        # parameters if you have already set the pose or joint target for the group
+        self.arm_move_group.go(joint_goal, wait=True)
+
+    def rotate_wrist(self):
+        #start here
+        joint_goal = self.arm_move_group.get_current_joint_values()
+        joint_goal[5] -= 1.57#4247350829385486 #wrist_rotate
+        # The go command can be called with joint values, poses, or without any
+        # parameters if you have already set the pose or joint target for the group
+        self.arm_move_group.go(joint_goal, wait=True)
+
+
     def marker_arm(self):
         #this is very simple because we are just putting the point P in the base_link frame (it is static in this frame)
         marker = Marker()
@@ -119,6 +143,8 @@ class MoveLocobotArm(object):
             # self.pose_goal.orientation.w = 1 #np.cos(th/2)
             # publish a marker to the goal
             self.marker_arm()
+            rospy.loginfo("Opening gripper")
+            self.open_gripper()
             rospy.loginfo("Setting pose target")
             self.arm_move_group.set_pose_target(self.pose_goal)
             # now we call the planner to compute and execute the plan
@@ -130,12 +156,17 @@ class MoveLocobotArm(object):
             rospy.loginfo("Stopping arm movement")
             self.arm_move_group.stop()
             # It is always good to clear your targets after planning with poses.
-            # Note: there is no equivalent function for clear_joint_value_targets()
+            # Note: there is no equivaflent function for clear_joint_value_targets()
+            
+            # rospy.sleep(1)
+            rospy.loginfo("Closing gripper")
+            self.close_gripper()
+            # rospy.sleep(1)
             rospy.loginfo("Clearing pose targets")
             self.arm_move_group.clear_pose_targets()
-            self.open_gripper()
-            self.close_gripper()
-            self.move_arm_down_for_camera()
+            self.move_arm_slightly_up()
+            # self.rotate_wrist()
+            # self.move_arm_down_for_camera()
         except Exception as e:
             print("Error Pick Read: ", e)
 
