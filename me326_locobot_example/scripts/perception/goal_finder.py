@@ -57,11 +57,11 @@ class GoalFinder:
                                                    "msg" : visualization_msgs.msg.Marker(),
                                                    }})
             self.stations_marker_pub[i]['msg'].header.frame_id = "locobot/odom"
-            self.stations_marker_pub[i]['msg'].type = Marker.CUBE
+            self.stations_marker_pub[i]['msg'].type = Marker.SPHERE
             self.stations_marker_pub[i]['msg'].action = Marker.ADD
             self.stations_marker_pub[i]['msg'].scale.x = 0.1
             self.stations_marker_pub[i]['msg'].scale.y = 0.1
-            self.stations_marker_pub[i]['msg'].scale.z = 0.1
+            self.stations_marker_pub[i]['msg'].scale.z = 0.01
             self.stations_marker_pub[i]['msg'].color.a = 1.0
             # Color: (1, 0, 0), (0, 1, 0), (0, 0, 1)
             self.stations_marker_pub[i]['msg'].color.r = 1 if i%3==0 else 0 
