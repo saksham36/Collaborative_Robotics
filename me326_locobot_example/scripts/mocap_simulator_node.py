@@ -101,7 +101,7 @@ class MocapSimulatorNode:
             self.prev_time = curr_time
             for i in range(len(model_state_msg.name)):
                 for model in self.model_list:
-                    rospy.loginfo("Model state: %s", model_state_msg.name[i])
+                    # rospy.loginfo("Model state: %s", model_state_msg.name[i])
                     # rospy.loginfo("Model "+model+" found in Gazebo model state message!")
                     if model_state_msg.name[i] == model or model_state_msg.name[i] == "red_cube_6":
                         #Get model pose from Gazebo message

@@ -48,7 +48,10 @@ class GoalFinder:
     def perception_callback(self, msg):
         self.perception_grid = msg
         grid = self.get_grid_as_np(self.perception_grid)
-        robot_pos = self.get_robot_pos(grid)
+        try:
+            robot_pos = self.get_robot_pos(grid)
+        except:
+            return
         self.mask_grid(grid)
 
         ## TODO ##
