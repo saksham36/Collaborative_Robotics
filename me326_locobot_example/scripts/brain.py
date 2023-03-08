@@ -186,25 +186,12 @@ class Brain:
                 
 
     def goal_callback(self, data):
-        if self.mode not in [Mode.INIT, Mode.PICK, Mode.PARK, Mode.MOVE, Mode.GOAL_ALIGN, Mode.IDLE]:  # TODO: Check
+        if self.mode not in [Mode.INIT, Mode.PICK, Mode.PARK, Mode.MOVE, Mode.GOAL_ALIGN, Mode.DROP]:  # TODO: Check
             self.x_g = data.x
             self.y_g = data.y
             self.theta_g = data.theta
             rospy.loginfo('Received Goal')
             self.replan()
-        if self.mode == Mode.IDLE:
-            check_dist = np.linalg.norm(np.array([self.x - data.x, self.y - data.y])) < self.at_thresh
-            rospy.loginfo('Received Goal while in Idle {} {} {}, '.format(check_dist, self.x, data.x))
-            if self.theta_g != None and check_dist:  #check if at the proposed goal location
-                rospy.loginfo('Did not switch, at goal')
-                self.switch_mode(Mode.IDLE) 
-            else:
-                self.x_g = data.x
-                self.y_g = data.y
-                self.theta_g = data.theta
-                rospy.loginfo('Received Goal')
-                self.replan()
-                self.switch_mode(Mode.MOVE)
 
     def map_callback(self, msg):
         self.map_width = msg.info.width
@@ -502,7 +489,7 @@ class Brain:
                 rospy.loginfo("Moving to pick up cube")
                 rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                 rospy.loginfo("Goal: {}".format(p))
-                ##self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
+                self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
                 # self.move_arm_obj()
                 rospy.loginfo("Picked up cube")
                 self.toggle_drop_flag()
