@@ -76,7 +76,9 @@ class GoalFinder:
 
     def ask_for_station_callback(self, msg):
             station = self.config['stations'][0] #TODO: Station selection algo
-            self.station_pub_flag = True
+            bool_message = msg
+            self.station_pub_flag = bool_message.data #message, not true, so can go back and forth
+            rospy.loginfo("station_pub_flag: {}".format(self.station_pub_flag))
             self.publish_goal(station[0], station[1], False)
 
     def perception_callback(self, msg):
@@ -121,20 +123,16 @@ class GoalFinder:
             rospy.loginfo("Publishing station as goal")
             goal.x = -0.5# self.x_g
             goal.y = -0.5# self.y_g
-            (_,rotation) = self.tf.lookupTransform('locobot/odom', \
-                'locobot/base_link', rospy.Time(0))
-            euler = euler_from_quaternion(rotation)
-            goal.theta = euler[2] + np.pi / 2
         else:
             rospy.loginfo("Publishing station as cube")
             # goal.x = x
             # goal.y = y
             goal.x = 1
             goal.y = 1
-            (_,rotation) = self.tf.lookupTransform('locobot/odom', \
-                'locobot/base_link', rospy.Time(0))
-            euler = euler_from_quaternion(rotation)
-            goal.theta = euler[2]
+        (_,rotation) = self.tf.lookupTransform('locobot/odom', \
+            'locobot/base_link', rospy.Time(0))
+        euler = euler_from_quaternion(rotation)
+        goal.theta = euler[2]
         # rospy.loginfo("Publishing goal: " + str(goal) + " to /locobot/goal")
         self.goal_pub.publish(goal)
 

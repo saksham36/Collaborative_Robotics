@@ -186,7 +186,7 @@ class Brain:
                 
 
     def goal_callback(self, data):
-        if self.mode not in [Mode.INIT, Mode.PICK, Mode.PARK, Mode.MOVE, Mode.GOAL_ALIGN, Mode.DROP]:  # TODO: Check
+        if self.mode not in [Mode.INIT, Mode.PICK, Mode.PARK, Mode.MOVE, Mode.GOAL_ALIGN, Mode.DROP, Mode.GOAL_ALIGN]:  # TODO: Check
             self.x_g = data.x
             self.y_g = data.y
             self.theta_g = data.theta
@@ -317,7 +317,9 @@ class Brain:
 
     def publish_ask_station(self):
         rospy.loginfo("Publishing ask for station: %s", self.drop_flag)
-        self.ask_for_station_pub.publish(self.drop_flag)
+        Bool_to_send = Bool()
+        Bool_to_send.data = self.drop_flag
+        self.ask_for_station_pub.publish(Bool_to_send)
 
     def replan(self,):
         # Make sure we have a map
@@ -399,6 +401,54 @@ class Brain:
         self.plan_fail = 0
         self.switch_mode(Mode.MOVE)
 
+    def headingError(self):
+
+        #angular error is the angle that cube is in base_frame
+        cube_frame = "/locobot/odom"
+        robot_frame = "/locobot/base_link"
+        
+        #want cube X, Y in ROBOT frame and have it in cubeframe
+        self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
+
+        red_cube_pnt=PointStamped()
+                    
+        red_cube_pnt.header.frame_id = "/locobot/odom"
+        red_cube_pnt.header.stamp =rospy.Time(0)
+        red_cube_pnt.point.x=self.x_g
+        red_cube_pnt.point.y=self.y_g
+
+        #transform to arm base frame
+        pos_in_robot = self.trans_listener.transformPoint("/locobot/base_link",red_cube_pnt)              
+        
+        #extract into a format to give move it
+        cubeX_roboframe = pos_in_robot.point.x
+        cubeY_roboframe = pos_in_robot.point.y
+                    
+        #angle of cube with respect to world frame
+        orient_error = np.arctan2(cubeY_roboframe, cubeX_roboframe) 
+        print("orient_error [deg]: ", orient_error * 180 / np.pi)
+
+        return orient_error
+
+    def move_align(self):
+
+        control_msg = Twist()
+        control_msg.linear.x = float(0) #keep base steady
+        
+        orient_error = self.headingError()    
+
+        if abs(orient_error) > 10 * np.pi / 180: 
+            Kp_angle_err = 0.2 #gain for angular error (here a scalar because we are only rotating about the z-axis)
+            print("angular control: ", Kp_angle_err * orient_error)
+            control_msg.angular.z = Kp_angle_err * orient_error
+            self.switch_mode(Mode.GOAL_ALIGN)
+
+        else:
+            print("orientation reached")
+            control_msg.angular.z = float(0)
+            self.switch_mode(Mode.DROP)
+            
+    
     def run(self):
         rate = rospy.Rate(10)  # 10 Hz
         while not rospy.is_shutdown():
@@ -440,9 +490,8 @@ class Brain:
                     self.current_plan_start_time = rospy.get_rostime()
                     self.switch_mode(Mode.MOVE)
 
-            # elif self.mode == Mode.GOAL_ALIGN:
-            #     if self.aligned_goal():
-            #         self.switch_mode(Mode.PICK)
+            elif self.mode == Mode.GOAL_ALIGN:
+                self.move_align()
 
             elif self.mode == Mode.MOVE:
                 if self.at_goal():
@@ -489,44 +538,51 @@ class Brain:
                 rospy.loginfo("Moving to pick up cube")
                 rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                 rospy.loginfo("Goal: {}".format(p))
-                self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
+                #self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
                 # self.move_arm_obj()
                 rospy.loginfo("Picked up cube")
                 self.toggle_drop_flag()
                 self.switch_mode(Mode.IDLE)
             
             elif self.mode == Mode.DROP:
-                self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
-                aux=PointStamped()
-                # aux is an auxiliary point in the odom frame                
-                aux.header.frame_id = "/locobot/odom"
-                aux.header.stamp =rospy.Time(0)
-                aux.point.x=self.x_g
-                aux.point.y=self.y_g
-                aux.point.z=0.1 # To prevent the gripper from touching the ground
-                pos_in_arm=self.trans_listener.transformPoint("/locobot/base_link",aux)
 
-                # p is the goal where the gripper should be in base_link frame
-                p = PoseStamped()
-                p.header.frame_id = "locobot/base_link"
-                # x_g, y_g are the coordinates of the cube in 2-D
-                p.pose.position.x = pos_in_arm.point.x # self.x_g
-                p.pose.position.y = pos_in_arm.point.y # self.y_g
-                p.pose.position.z - pos_in_arm.point.z # 0.02 # To prevent the gripper from touching the ground
+                orient_error = self.headingError()    
 
-                # quat = tf.transformations.quaternion_from_euler(0, self.theta_g, 0)
-                p.pose.orientation.x = 0#quat[0]
-                p.pose.orientation.y = 0#quat[1]
-                p.pose.orientation.z = 0#quat[2]
-                p.pose.orientation.w = 0#quat[3]
-                rospy.loginfo("Moving to drop cube")
-                rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
-                rospy.loginfo("Goal: {}".format(p))
-                self.move_arm_obj.move_gripper_down_to_drop_callback(p)
-                # self.move_arm_obj()
-                rospy.loginfo("Dropped cube")
-                self.toggle_drop_flag()
-                self.switch_mode(Mode.IDLE)
+                if abs(orient_error) > 10 * np.pi / 180:
+                    self.switch_mode(Mode.GOAL_ALIGN)
+
+                else:
+                    self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
+                    aux=PointStamped()
+                    # aux is an auxiliary point in the odom frame                
+                    aux.header.frame_id = "/locobot/odom"
+                    aux.header.stamp =rospy.Time(0)
+                    aux.point.x=self.x_g
+                    aux.point.y=self.y_g
+                    aux.point.z=0.1 # To prevent the gripper from touching the ground
+                    pos_in_arm=self.trans_listener.transformPoint("/locobot/base_link",aux)
+
+                    # p is the goal where the gripper should be in base_link frame
+                    p = PoseStamped()
+                    p.header.frame_id = "locobot/base_link"
+                    # x_g, y_g are the coordinates of the cube in 2-D
+                    p.pose.position.x = pos_in_arm.point.x # self.x_g
+                    p.pose.position.y = pos_in_arm.point.y # self.y_g
+                    p.pose.position.z - pos_in_arm.point.z # 0.02 # To prevent the gripper from touching the ground
+
+                    # quat = tf.transformations.quaternion_from_euler(0, self.theta_g, 0)
+                    p.pose.orientation.x = 0#quat[0]
+                    p.pose.orientation.y = 0#quat[1]
+                    p.pose.orientation.z = 0#quat[2]
+                    p.pose.orientation.w = 0#quat[3]
+                    rospy.loginfo("Moving to drop cube")
+                    rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
+                    rospy.loginfo("Goal: {}".format(p))
+                    #self.move_arm_obj.move_gripper_down_to_drop_callback(p)
+                    # self.move_arm_obj()
+                    rospy.loginfo("Dropped cube")
+                    self.toggle_drop_flag()
+                    self.switch_mode(Mode.IDLE) 
 
 
             self.publish_control()
