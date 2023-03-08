@@ -434,14 +434,21 @@ class Brain:
 
         return orient_error
 
+    def check_align_error(self):
+        
+        orient_error = self.headingError() 
+        theta_rad = self.aligned_theta * np.pi / 180 
+
+        return (abs(orient_error) < theta_rad or abs(orient_error) > (2*np.pi - theta_rad) )
+        
+    
     def move_align(self):
         
         cmd_vel = Twist()
-        cmd_vel.linear.x = 0#keep base steady        
-        
-        orient_error = self.headingError()    
+        cmd_vel.linear.x = 0#keep base steady                
 
-        if abs(orient_error) > self.aligned_theta * np.pi / 180: 
+        if not self.check_align_error():
+            orient_error = self.headingError()
             Kp_angle_err = 0.2 #gain for angular error (here a scalar because we are only rotating about the z-axis)
             print("angular control: ", Kp_angle_err * orient_error)
             #apply control limits
@@ -529,7 +536,7 @@ class Brain:
             elif self.mode == Mode.PICK:
                 orient_error = self.headingError()    
 
-                if abs(orient_error) > self.aligned_theta * np.pi / 180:
+                if not self.check_align_error():
                     self.switch_mode(Mode.GOAL_ALIGN)
 
                 else:
@@ -566,10 +573,10 @@ class Brain:
                     self.switch_mode(Mode.IDLE)
             
             elif self.mode == Mode.DROP:
-
+                    
                 orient_error = self.headingError()    
 
-                if abs(orient_error) > self.aligned_theta * np.pi / 180:
+                if not self.check_align_error():
                     self.switch_mode(Mode.GOAL_ALIGN)
 
                 else:
