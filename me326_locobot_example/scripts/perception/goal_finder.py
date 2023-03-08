@@ -119,11 +119,12 @@ class GoalFinder:
 
     def publish_goal(self, x, y, from_perception=True):
         goal = Pose2D()
-        if self.station_pub_flag and from_perception == False:
+        if self.station_pub_flag:# and from_perception == False:
             rospy.loginfo("Publishing station as goal")
             goal.x = self.x_g
             goal.y = self.y_g
         else:
+            rospy.loginfo("Publishing station as cube")
             # goal.x = x
             # goal.y = y
             goal.x = 1
