@@ -126,8 +126,8 @@ class GoalFinder:
         else:
             # goal.x = x
             # goal.y = y
-            goal.x = 1
-            goal.y = 1
+            goal.x = 3
+            goal.y = 3
         (_,rotation) = self.tf.lookupTransform('locobot/odom', \
             'locobot/base_link', rospy.Time(0))
         euler = euler_from_quaternion(rotation)
