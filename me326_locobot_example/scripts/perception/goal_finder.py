@@ -42,9 +42,7 @@ class GoalFinder:
 
         # Perception Grid subscriber
         self.cube_sub = rospy.Subscriber('/perception_grid', OccupancyGrid, self.perception_callback)
-        self.ask_for_station_pub = rospy.Subscriber('/locobot/ask_for_station', Bool, self.ask_for_station_callback)
-        
- 
+        self.ask_for_station_pub = rospy.Subscriber('/locobot/ask_for_station', Bool, self.ask_for_station_callback)       
         
     def load_config(self):
         with open(CONFIG_FILE, 'r') as f:
@@ -123,16 +121,20 @@ class GoalFinder:
             rospy.loginfo("Publishing station as goal")
             goal.x = -0.5# self.x_g
             goal.y = -0.5# self.y_g
+            (_,rotation) = self.tf.lookupTransform('locobot/odom', \
+                'locobot/base_link', rospy.Time(0))
+            euler = euler_from_quaternion(rotation)
+            goal.theta = euler[2] + np.pi / 2
         else:
             rospy.loginfo("Publishing station as cube")
             # goal.x = x
             # goal.y = y
             goal.x = 1
             goal.y = 1
-        (_,rotation) = self.tf.lookupTransform('locobot/odom', \
-            'locobot/base_link', rospy.Time(0))
-        euler = euler_from_quaternion(rotation)
-        goal.theta = euler[2]
+            (_,rotation) = self.tf.lookupTransform('locobot/odom', \
+                'locobot/base_link', rospy.Time(0))
+            euler = euler_from_quaternion(rotation)
+            goal.theta = euler[2]
         # rospy.loginfo("Publishing goal: " + str(goal) + " to /locobot/goal")
         self.goal_pub.publish(goal)
 
