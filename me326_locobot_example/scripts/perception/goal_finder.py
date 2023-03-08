@@ -127,8 +127,8 @@ class GoalFinder:
             rospy.loginfo("Publishing station as cube")
             # goal.x = x
             # goal.y = y
-            goal.x = 3
-            goal.y = 3
+            goal.x = 1
+            goal.y = 1
         (_,rotation) = self.tf.lookupTransform('locobot/odom', \
             'locobot/base_link', rospy.Time(0))
         euler = euler_from_quaternion(rotation)
