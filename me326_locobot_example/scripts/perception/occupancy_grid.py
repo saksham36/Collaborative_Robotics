@@ -50,6 +50,7 @@ class OccupancyGridNode(object):
 
         self.occupancy_grid = OccupancyGrid()
         self.perception_grid = OccupancyGrid()
+        self.cube_thresh = 0.1
         
         # Initialize occupancy grid
         self.init_grids()
@@ -64,7 +65,7 @@ class OccupancyGridNode(object):
 
         rospy.loginfo("Successfully initialized Occupancy Grid node!")
 
-        self.cube_thresh = 0.1
+        
     
     #=====================================
     #         Gets parameters from
@@ -216,12 +217,13 @@ class OccupancyGridNode(object):
         return None
     
     def is_cell_free(self, grid, x, y):
-        num_cells = self.cube_thresh/grid.info.resolution
+        num_cells = int(self.cube_thresh/grid.info.resolution)
         for ii in range(-num_cells, num_cells+1):
             for jj in range(-num_cells, num_cells+1):
                 if self.is_in_gridmap([x+ii, y+jj]):
                     if grid.data[(y+jj)*grid.info.width + (x+ii)] != 0:
                         return False
+        return True
     
     def update_grid(self, grid, x, y, value):
         x_index, y_index = self.get_cell_index_from_xy(x, y)
