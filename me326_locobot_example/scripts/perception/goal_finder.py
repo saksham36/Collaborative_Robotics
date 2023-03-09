@@ -96,7 +96,7 @@ class GoalFinder:
         cubes = np.where((grid != 0) & (grid != 100))
         cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
 
-        self.mask_grid(grid)
+        grid = self.mask_grid(grid)
 
         ## TODO ##
         # Implement station - cubes logic
@@ -198,6 +198,7 @@ class GoalFinder:
                 xs, ys = np.where(grid == val)
                 for x, y in zip(xs,ys):
                     grid[x,y] = 0
+        return grid
 
 
 if __name__ == "__main__":
