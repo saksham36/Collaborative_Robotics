@@ -100,16 +100,15 @@ class GoalFinder:
         cubes = np.where((grid != 0) & (grid != 100))
         cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
         for cube in cubes:
-            if cube in self.dropped_cubes:
-                cubes = np.delete(cubes, np.where((cubes == cube).all(axis=1)), axis=0)
+            aux = np.where((cubes == cube).all(axis=1))
+            if len(aux[0]) > 1:
+                cubes = np.delete(cubes, aux[0][1:], axis=0)
         try:
             closest_cube = np.argmin(np.linalg.norm(cubes - robot_pos, axis=1))
         except Exception as e:
-            rospy.loginfo("No cubes in grid")
-            rospy.loginfo("Error: " + str(e))
             return
         cube_pos = cubes[closest_cube]
-        if self.x_g is None or self.y_g is None: # This is only for picking 1 cube
+        if self.x_g is None or self.y_g is None and self.station_pub_flag is not None: # This is only for picking 1 cube
             x,y = self.get_xy_from_cell_index(cube_pos)
             self.x_g = x
             self.y_g = y
@@ -121,7 +120,7 @@ class GoalFinder:
             self.stations_marker_pub[i]['marker_pub'].publish(self.stations_marker_pub[i]['msg'])
 
     def publish_goal(self, x, y):
-        if self.goal_pub is None:
+        if self.station_pub_flag is None:
             return
         goal = Pose2D()
         if self.station_pub_flag:
