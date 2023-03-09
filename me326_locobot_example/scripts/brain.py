@@ -231,7 +231,7 @@ class Brain:
             self.map_height,
             self.map_origin[0],
             self.map_origin[1],
-            2,
+            1,
             self.dilated_occupancy.data,
             0.7
         )
