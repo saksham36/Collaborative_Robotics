@@ -229,9 +229,9 @@ class Brain:
             self.map_height,
             self.map_origin[0],
             self.map_origin[1],
-            3,
+            1,
             self.dilated_occupancy.data,
-            0.7
+            0.8
         )
 
     def near_goal(self):
