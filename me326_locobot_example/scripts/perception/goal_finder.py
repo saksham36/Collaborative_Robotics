@@ -24,9 +24,9 @@ class GoalFinder:
 
         self.tf = tf.TransformListener()
 
-        # TODO: THis is only for debugging. Set's the goal
         self.x_g = None
         self.y_g = None
+        self.dropped_cubes = []
 
         self.config = {}
         self.stations_marker_pub = {}
@@ -99,6 +99,9 @@ class GoalFinder:
         # Find closest cube to robot
         cubes = np.where((grid != 0) & (grid != 100))
         cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
+        for cube in cubes:
+            if cube in self.dropped_cubes:
+                cubes = np.delete(cubes, np.where((cubes == cube).all(axis=1)), axis=0)
         try:
             closest_cube = np.argmin(np.linalg.norm(cubes - robot_pos, axis=1))
         except Exception as e:
@@ -106,7 +109,7 @@ class GoalFinder:
             rospy.loginfo("Error: " + str(e))
             return
         cube_pos = cubes[closest_cube]
-        if self.x_g is None or self.y_g is None: # TODO: This is only for picking 1 cube
+        if self.x_g is None or self.y_g is None: # This is only for picking 1 cube
             x,y = self.get_xy_from_cell_index(cube_pos)
             self.x_g = x
             self.y_g = y
@@ -121,19 +124,22 @@ class GoalFinder:
         goal = Pose2D()
         if self.station_pub_flag:# and from_perception == False:
             rospy.loginfo("Publishing station as goal")
-            goal.x = -0.5# self.x_g
-            goal.y = -0.5# self.y_g
+            goal.x = x
+            goal.y = y
+            self.dropped_cubes.append((self.x_g,self.y_g))
+            self.x_g, self.y_g = None, None
+            # goal.x = -0.5
+            # goal.y = -0.5
         else:
             rospy.loginfo("Publishing station as cube")
-            # goal.x = x
-            # goal.y = y
-            goal.x = 1
-            goal.y = 1
+            goal.x = x
+            goal.y = y
+            # goal.x = 1
+            # goal.y = 1
         (_,rotation) = self.tf.lookupTransform('locobot/odom', \
             'locobot/base_link', rospy.Time(0))
         euler = euler_from_quaternion(rotation)
         goal.theta = euler[2]
-        # rospy.loginfo("Publishing goal: " + str(goal) + " to /locobot/goal")
         self.goal_pub.publish(goal)
 
         goal_marker = Marker()
