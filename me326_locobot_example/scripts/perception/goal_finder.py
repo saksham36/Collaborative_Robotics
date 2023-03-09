@@ -113,7 +113,7 @@ class GoalFinder:
         except Exception as e:
             return
         cube_pos = cubes[closest_cube]
-        if self.x_g is None or self.y_g is None and self.station_pub_flag is not None: # This is only for picking 1 cube
+        if self.x_g is None or self.y_g is None or self.station_pub_flag is not None: # This is only for picking 1 cube
             x,y = self.get_xy_from_cell_index(cube_pos)
             self.x_g = x
             self.y_g = y
