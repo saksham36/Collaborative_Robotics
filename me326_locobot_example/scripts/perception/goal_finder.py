@@ -92,6 +92,10 @@ class GoalFinder:
         except:
             rospy.loginfo("Robot not in grid")
             return
+        
+        cubes = np.where((grid != 0) & (grid != 100))
+        cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
+
         self.mask_grid(grid)
 
         ## TODO ##
@@ -182,17 +186,15 @@ class GoalFinder:
     
     def mask_grid(self, grid):
         for color in self.config['colors']:
-            print(color)
-            print(self.config['team_colors'])
             if color not in self.config['team_colors']:
                 if color == "red":
-                    val = CubeColor.RED
+                    val = CubeColor.RED.value
                 elif color == "green":
-                    val = CubeColor.GREEN
+                    val = CubeColor.GREEN.value
                 elif color == "blue":
-                    val = CubeColor.BLUE
+                    val = CubeColor.BLUE.value
                 elif color == "yellow":
-                    val = CubeColor.YELLOW
+                    val = CubeColor.YELLOW.value
                 xs, ys = np.where(grid == val)
                 for x, y in zip(xs,ys):
                     grid[x,y] = 0
