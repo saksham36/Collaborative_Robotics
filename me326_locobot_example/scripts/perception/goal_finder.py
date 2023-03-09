@@ -77,9 +77,9 @@ class GoalFinder:
     def ask_for_station_callback(self, msg):
             station = self.config['stations'][0] #TODO: Station selection algo
             bool_message = msg
-            self.station_pub_flag = bool_message.data #message, not true, so can go back and forth
+            self.station_pub_flag = bool_message.data # message, not true, so can go back and forth
             rospy.loginfo("station_pub_flag: {}".format(self.station_pub_flag))
-            self.publish_goal(station[0], station[1], False)
+            self.publish_goal(station[0], station[1])
 
     def perception_callback(self, msg):
         # rospy.loginfo("Received perception grid")
@@ -113,14 +113,14 @@ class GoalFinder:
             x,y = self.get_xy_from_cell_index(cube_pos)
             self.x_g = x
             self.y_g = y
-        self.publish_goal(self.x_g,self.y_g, True)
+        self.publish_goal(self.x_g,self.y_g)
         self.publish_stations()
         
     def publish_stations(self):
         for i in range(len(self.config['stations'])):
             self.stations_marker_pub[i]['marker_pub'].publish(self.stations_marker_pub[i]['msg'])
 
-    def publish_goal(self, x, y, from_perception=True):
+    def publish_goal(self, x, y):
         goal = Pose2D()
         if self.station_pub_flag:# and from_perception == False:
             rospy.loginfo("Publishing station as goal")

@@ -562,7 +562,7 @@ class Brain:
                     p.pose.orientation.x = 0#quat[0]
                     p.pose.orientation.y = 0#quat[1]
                     p.pose.orientation.z = 0#quat[2]
-                    p.pose.orientation.w = 0#quat[3]
+                    p.pose.orientation.w = 1#quat[3]
                     rospy.loginfo("Moving to pick up cube")
                     rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                     rospy.loginfo("Goal: {}".format(p))
@@ -601,7 +601,7 @@ class Brain:
                     p.pose.orientation.x = 0#quat[0]
                     p.pose.orientation.y = 0#quat[1]
                     p.pose.orientation.z = 0#quat[2]
-                    p.pose.orientation.w = 0#quat[3]
+                    p.pose.orientation.w = 1#quat[3]
                     rospy.loginfo("Moving to drop cube")
                     rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                     rospy.loginfo("Goal: {}".format(p))
