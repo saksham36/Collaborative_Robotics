@@ -289,7 +289,7 @@ class Brain:
             V, om = self.traj_controller.compute_control(
                 self.x, self.y, self.theta, t
             )
-        elif self.mode in [Mode.ALIGN]: #,Mode.GOAL_ALIGN]:
+        elif self.mode in Mode.ALIGN:
             V, om = self.heading_controller.compute_control(
                 self.x, self.y, self.theta, t
             )
@@ -346,11 +346,9 @@ class Brain:
         planned_path = problem.path
         rospy.loginfo("Planned path length: %d", len(planned_path))
         # Check whether path is too short
-        if len(planned_path) < 4:
+        if len(planned_path) < 6:
             rospy.loginfo("Path too short")
-            self.switch_mode(Mode.PICK)
-            self.publish_control()
-            
+            self.switch_mode(Mode.ALIGN)
             return
 
         # Smooth and generate a trajectory

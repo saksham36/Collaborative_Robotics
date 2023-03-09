@@ -134,8 +134,8 @@ class GoalFinder:
             # goal.x = -0.5
             # goal.y = -0.5
         else:
-            x = 1
-            y = 1
+            # x = 1
+            # y = 1
             goal.x = x
             goal.y = y
             # goal.x = 1
