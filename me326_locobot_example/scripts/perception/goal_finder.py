@@ -102,9 +102,10 @@ class GoalFinder:
         cubes = np.where((grid != 0) & (grid != 100))
         cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
         for cube in cubes:
-            aux = np.where((cubes == cube).all(axis=1))
-            if len(aux[0]) > 1:
-                cubes = np.delete(cubes, aux[0][1:], axis=0)
+            if tuple(cube.tolist()) in self.dropped_cubes:
+                aux = np.where((cubes == cube).all(axis=1))
+                if len(aux[0]) > 1:
+                    cubes = np.delete(cubes, aux[0][1:], axis=0)
         try:
             closest_cube = np.argmin(np.linalg.norm(cubes - robot_pos, axis=1))
         except Exception as e:

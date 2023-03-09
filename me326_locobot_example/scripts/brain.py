@@ -193,6 +193,7 @@ class Brain:
             self.y_g = data.y
             self.theta_g = data.theta
             rospy.loginfo('Received Goal')
+            rospy.loginfo('x_g: {}, y_g: {}, theta_g: {}'.format(self.x_g, self.y_g, self.theta_g))
             self.replan()
 
     def map_callback(self, msg):
