@@ -192,9 +192,6 @@ class OccupancyGridNode(object):
         # Publish occupancy grid
         self.occupancy_grid_pub.publish(self.occupancy_grid)
     
-    def get_occupancy_grid_as_np(self):
-        return np.array(self.occupancy_grid.data).reshape(self.occupancy_grid.info.height, self.occupancy_grid.info.width)
-    
     def get_xy_from_cell_index(self, index):
         x = index[1]*self.resolution + self.occupancy_grid.info.origin.position.x
         y = index[0]*self.resolution + self.occupancy_grid.info.origin.position.y

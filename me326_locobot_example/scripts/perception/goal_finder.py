@@ -13,6 +13,8 @@ import numpy as np
 from occupancy_grid import CubeColor
 import rospkg
 import os
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 rp = rospkg.RosPack()
 CONFIG_FILE = os.path.join(rp.get_path("me326_locobot_example"), "scripts", "config.yaml")
@@ -176,12 +178,19 @@ class GoalFinder:
 
     
     def get_xy_from_cell_index(self, index):
-        x = index[0]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.x
-        y = index[1]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.y
+        x = index[1]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.x
+        y = index[0]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.y
         return x, y
 
     def get_grid_as_np(self, grid):
-        return np.array(grid.data).reshape(grid.info.height, grid.info.width)
+        grid = np.array(grid.data, dtype=np.int8).reshape(grid.info.height, grid.info.width)
+
+        heatmap = sns.heatmap(grid, cmap="YlGnBu", cbar=False, xticklabels=False, yticklabels=False)
+        heatmap.invert_yaxis()
+        heatmap.figure.savefig("heatmap.png")
+        plt.close(heatmap.figure)
+        
+        return grid
 
     def get_robot_pos(self, grid):
         x, y = np.where(grid == 100)
