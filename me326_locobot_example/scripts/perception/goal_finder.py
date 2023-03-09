@@ -96,6 +96,8 @@ class GoalFinder:
         cubes = np.where((grid != 0) & (grid != 100))
         cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
 
+        rospy.loginfo("num cubes: {}".format(len(cubes)))
+
         grid = self.mask_grid(grid)
 
         ## TODO ##
@@ -105,6 +107,9 @@ class GoalFinder:
         # Find closest cube to robot
         cubes = np.where((grid != 0) & (grid != 100))
         cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
+
+        rospy.loginfo("num cubes: {}".format(len(cubes)))
+        
         for cube in cubes:
             if tuple(cube.tolist()) in self.dropped_cubes:
                 aux = np.where((cubes == cube).all(axis=1))
@@ -196,6 +201,7 @@ class GoalFinder:
                 elif color == "yellow":
                     val = CubeColor.YELLOW.value
                 xs, ys = np.where(grid == val)
+                rospy.loginfo("num masked {} {}".format(color, len(xs)))
                 for x, y in zip(xs,ys):
                     grid[x,y] = 0
         return grid
