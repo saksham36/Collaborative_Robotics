@@ -111,7 +111,7 @@ class Brain:
         self.kdy = 1
 
         # heading controller parameters
-        self.kp_th = 0.5
+        self.kp_th = 1
 
         # flag to toggle between dropping and picking
         self.drop_flag = False
@@ -145,6 +145,10 @@ class Brain:
         self.move_arm_obj = MoveLocobotArm(moveit_commander=moveit_commander)
         self.move_arm_obj.display_moveit_info()
         self.move_arm_obj.move_arm_down_for_camera()
+        
+        self.V_prev = None
+        self.flip = False
+        self.started_flipping = False
 
     def get_current_plan_time(self):
         t = (rospy.get_rostime() - self.current_plan_start_time).to_sec()
@@ -183,10 +187,35 @@ class Brain:
 
         self.total += abs(abs(self.prev_theta) - abs(self.theta))
         self.prev_theta = self.theta
+        
+    def flip_orientation(self, start=False):
+        if start:
+            self.prev_theta = self.theta
+            self.total = 0
+        if self.total > np.pi:
+            self.flip = False
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0
+            cmd_vel.angular.z = 0.0
+            self.vel_publisher.publish(cmd_vel)
+            self.total = 0
+            self.started_flipping
+            if self.drop_flag:
+                self.switch_mode(Mode.DROP)
+            else:
+                self.switch_mode(Mode.PICK)
+        else:
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0
+            cmd_vel.angular.z = 0.2
+            self.vel_publisher.publish(cmd_vel)
+            
+        self.total += abs(abs(self.prev_theta) - abs(self.theta))
+        self.prev_theta = self.theta
                 
 
     def goal_callback(self, data):
-        if self.mode == Mode.IDLE:  # TODO: Check
+        if self.mode in [Mode.IDLE, Mode.ALIGN]:
             self.x_g = data.x
             self.y_g = data.y
             self.theta_g = data.theta
@@ -303,6 +332,11 @@ class Brain:
         cmd_vel.linear.x = V
         cmd_vel.angular.z = om
         self.vel_publisher.publish(cmd_vel)
+        if self.V_prev is not None:
+            if self.V_prev < 0 and V == 0:
+                self.flip = True
+            
+        self.V_prev = V
 
     def toggle_drop_flag(self):
         self.drop_flag = not self.drop_flag
@@ -433,12 +467,15 @@ class Brain:
             if self.mode == Mode.ALIGN:
                 if self.at_goal():
                     rospy.loginfo("Reached goal")
-                    self.heading_controller.load_goal(self.th_init)
+                    self.heading_controller.load_goal(self.theta_g)
                     if self.aligned(self.theta_g):
-                        if self.drop_flag:
-                            self.switch_mode(Mode.DROP)
+                        if self.flip:
+                            self.switch_mode(Mode.GOAL_ALIGN)
                         else:
-                            self.switch_mode(Mode.PICK)
+                            if self.drop_flag:
+                                self.switch_mode(Mode.DROP)
+                            else:
+                                self.switch_mode(Mode.PICK)
                 else:
                     rospy.loginfo("Aligning with trajectory start")
                     if self.aligned(self.th_init):
@@ -448,7 +485,16 @@ class Brain:
             elif self.mode == Mode.MOVE:
                 if self.at_goal():
                     self.heading_controller.load_goal(self.theta_g)
-                    self.switch_mode(Mode.ALIGN)
+                    if self.aligned(self.theta_g):
+                        if self.flip:
+                            self.switch_mode(Mode.GOAL_ALIGN)
+                        else:
+                            if self.drop_flag:
+                                self.switch_mode(Mode.DROP)
+                            else:
+                                self.switch_mode(Mode.PICK)
+                    else:
+                        self.switch_mode(Mode.ALIGN)
                 elif not self.close_to_plan_start():
                     rospy.loginfo("Replanning because far from start")
                     self.replan()
@@ -457,7 +503,17 @@ class Brain:
                 ).to_sec() > self.current_plan_duration:
                     rospy.loginfo("Replanning because out of time")
                     self.replan()  # we aren't near the goal but we thought we should have been, so replan
-
+                    
+            elif self.mode == Mode.GOAL_ALIGN:
+                if not self.started_flipping:
+                    rospy.loginfo("Flipping orientation")
+                    self.started_flipping = True
+                    self.flip_orientation(start=True)
+                else:
+                    self.flip_orientation()
+                rate.sleep()
+                continue
+ 
             elif self.mode in [Mode.PICK, Mode.DROP]:
                 self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
                 aux=PointStamped()

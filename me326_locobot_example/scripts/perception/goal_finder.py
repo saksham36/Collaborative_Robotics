@@ -40,7 +40,7 @@ class GoalFinder:
         self.goal_pub = rospy.Publisher('/locobot/goal', Pose2D, queue_size=10)
         self.goal_marker_pub = rospy.Publisher('/locobot/marker_goal', Marker, queue_size=1)
 
-        self.cubes = [(0.922, -0.7169), (-1.482, -1.0328), (-1.0035, -0.0437), (-1.824, 0.7602), (-0.3374, -1.1038672902109)]
+        self.cubes = [(0.922, -0.7169), (-1.0035, -0.0437), (-1.482, -1.0328), (-1.824, 0.7602), (-0.3374, -1.1038672902109)]
         self.num_cubes = 0
         
 
@@ -82,9 +82,11 @@ class GoalFinder:
         station = self.config['stations'][0] #TODO: Station selection algo
         self.station_pub_flag = msg.data
         if self.station_pub_flag:
+            self.dropped_cubes.append((self.x_g,self.y_g))
             self.x_g = station[0]
             self.y_g = station[1]
             self.publish_goal(self.x_g,self.y_g)
+            self.num_cubes += 1
         rospy.loginfo("station_pub_flag: {}".format(self.station_pub_flag))
 
     def perception_callback(self, msg):
@@ -135,9 +137,7 @@ class GoalFinder:
         if self.station_pub_flag:
             goal.x = -1 #x
             goal.y = 0 #y
-            self.dropped_cubes.append((self.x_g,self.y_g))
             self.x_g, self.y_g = None, None
-            self.num_cubes += 1
             # goal.x = -0.5
             # goal.y = -0.5
         else:
