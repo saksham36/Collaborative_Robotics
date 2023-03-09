@@ -247,6 +247,8 @@ class Brain:
         )
 
     def aligned(self, theta):
+        rospy.loginfo("Aligning with theta: %s", theta)
+        rospy.loginfo("Current theta: %s", self.theta)
         return (
             abs(wrapToPi(self.theta - theta)) < self.at_thresh_theta
         )
