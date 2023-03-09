@@ -149,8 +149,8 @@ class GoalFinder:
         goal_marker.header.stamp = rospy.Time.now()
         goal_marker.type = Marker.ARROW
         goal_marker.action = Marker.ADD
-        goal_marker.pose.position.x = 1 # x
-        goal_marker.pose.position.y = 1 # y
+        goal_marker.pose.position.x = self.x_g
+        goal_marker.pose.position.y = self.y_g
         goal_marker.pose.position.z = 0.1
         goal_marker.pose.orientation.x = rotation[0]
         goal_marker.pose.orientation.y = rotation[1]
