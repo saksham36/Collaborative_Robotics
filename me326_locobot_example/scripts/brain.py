@@ -172,7 +172,7 @@ class Brain:
             cmd_vel.angular.z = 0.0
             self.vel_publisher.publish(cmd_vel)
             rospy.loginfo("Finished exploring world")
-            # self.switch_mode(Mode.IDLE)
+            self.switch_mode(Mode.IDLE)
             self.explore_theta = None
             self.total = 0
        
