@@ -94,13 +94,11 @@ class Brain:
         self.v_max = 0.22
         self.om_max = 0.4
         self.v_des = 0.12
-        self.theta_start_thresh = 0.05
         self.start_pos_thresh = 0.15
 
         # threshold at which to stop moving
         self.at_thresh = 0.65
-        self.at_thresh_theta = 0.01
-        self.aligned_theta = 10
+        self.at_thresh_theta = 0.05
 
         # trajectory smoothing
         self.spline_alpha = 0.01
@@ -243,23 +241,14 @@ class Brain:
         )
 
     def at_goal(self):
-        # print(20*'*')
-        # rospy.loginfo("Position distance: %s", np.linalg.norm(np.array([self.x - self.x_g, self.y - self.y_g])))
         return (
             np.linalg.norm(np.array([self.x - self.x_g, self.y - self.y_g]))
             < self.at_thresh
         )
-    
-    def aligned_goal(self):
-        print(20*'*')
-        rospy.loginfo("Theta: %s", self.theta)
-        rospy.loginfo("Theta goal: %s", self.theta_g)
-        rospy.loginfo("Orientation distance: %s", abs(wrapToPi(self.theta - self.theta_g)))
-        return abs(wrapToPi(self.theta - self.theta_g)) < self.at_thresh_theta
 
-    def aligned(self):
+    def aligned(self, theta):
         return (
-            abs(wrapToPi(self.theta - self.th_init)) < self.theta_start_thresh
+            abs(wrapToPi(self.theta - theta)) < self.at_thresh_theta
         )
         
     def close_to_plan_start(self):
@@ -395,7 +384,7 @@ class Brain:
         self.th_init = traj_new[0, 2]
         self.heading_controller.load_goal(self.th_init)
 
-        if not self.aligned() and self.mode != Mode.ALIGN:
+        if not self.aligned(self.th_init) and self.mode != Mode.ALIGN:
             rospy.loginfo("Not aligned with start direction")
             self.switch_mode(Mode.ALIGN)
             return
@@ -403,69 +392,6 @@ class Brain:
         rospy.loginfo("Ready to move")
         self.plan_fail = 0
         self.switch_mode(Mode.MOVE)
-
-    def headingError(self):
-        
-        #want cube X, Y in ROBOT frame and have it in cubeframe
-        self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
-
-        red_cube_pnt=PointStamped()
-                    
-        red_cube_pnt.header.frame_id = "/locobot/odom"
-        red_cube_pnt.header.stamp =rospy.Time(0)
-        red_cube_pnt.point.x=self.x_g
-        red_cube_pnt.point.y=self.y_g
-
-        #transform to arm base frame
-        pos_in_robot = self.trans_listener.transformPoint("/locobot/base_link",red_cube_pnt)              
-        
-        #extract into a format to give move it
-        cubeX_roboframe = pos_in_robot.point.x
-        cubeY_roboframe = pos_in_robot.point.y
-                    
-        #angle of cube with respect to world frame
-        orient_error = ( (np.arctan2(cubeY_roboframe, cubeX_roboframe)) + 2 * np.pi ) % (2 * np.pi)
-
-        print_error = orient_error * 180 / np.pi
-        print("orient_error [deg]: ", print_error)
-        rospy.loginfo("orient_error [deg]: {}".format(print_error))
-
-        return orient_error
-
-    def check_align_error(self):
-        
-        orient_error = self.headingError() 
-        theta_rad = self.aligned_theta * np.pi / 180 
-
-        return (abs(orient_error) < theta_rad or abs(orient_error) > (2*np.pi - theta_rad) )
-        
-    
-    def move_align(self):
-        
-        cmd_vel = Twist()
-        cmd_vel.linear.x = 0#keep base steady                
-
-        if not self.check_align_error():
-            orient_error = self.headingError()
-            Kp_angle_err = 0.2 #gain for angular error (here a scalar because we are only rotating about the z-axis)
-            print("angular control: ", Kp_angle_err * orient_error)
-            #apply control limits
-            om = Kp_angle_err * orient_error
-            om = np.clip(om, -self.om_max, self.om_max)
-            cmd_vel.angular.z = om
-            self.switch_mode(Mode.GOAL_ALIGN)
-
-        else:
-            print("orientation reached")
-            cmd_vel.angular.z  = float(0)
-            if self.drop_flag:
-                self.switch_mode(Mode.DROP)
-            else: 
-                # if self.aligned_goal():
-                self.switch_mode(Mode.PICK)
-        
-        self.vel_publisher.publish(cmd_vel)
-            
             
     
     def run(self):
@@ -498,10 +424,6 @@ class Brain:
                     self.camera_explore()
                 rate.sleep()
                 continue
-
-            if self.mode == Mode.GOAL_ALIGN:
-                self.move_align()
-                continue
                 
             if self.mode in [Mode.ALIGN, Mode.MOVE]:
                 self.x_prev.append(self.x)
@@ -509,20 +431,18 @@ class Brain:
                 self.theta_prev.append(self.theta)
 
             if self.mode == Mode.ALIGN:
-                if self.aligned():
+                if self.aligned(self.th_init):
                     self.current_plan_start_time = rospy.get_rostime()
-                    self.switch_mode(Mode.MOVE)
+                    if self.at_goal():
+                        if self.drop_flag:
+                            self.switch_mode(Mode.DROP)
+                        else: 
+                            self.switch_mode(Mode.PICK)
+                    else:
+                        self.switch_mode(Mode.MOVE)
 
             elif self.mode == Mode.MOVE:
-                if self.at_goal():
-                    if self.drop_flag:
-                        self.switch_mode(Mode.DROP)
-                    else: 
-                        # if self.aligned_goal():
-                        self.switch_mode(Mode.PICK)
-                    # else:
-                    #     self.switch_mode(Mode.GOAL_ALIGN)
-                elif not self.close_to_plan_start():
+                if not self.close_to_plan_start():
                     rospy.loginfo("Replanning because far from start")
                     self.replan()
                 elif (
@@ -531,83 +451,45 @@ class Brain:
                     rospy.loginfo("Replanning because out of time")
                     self.replan()  # we aren't near the goal but we thought we should have been, so replan
 
-            elif self.mode == Mode.PICK:
-                orient_error = self.headingError()    
+            elif self.mode in [Mode.PICK, Mode.DROP]:
+                self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
+                aux=PointStamped()
+                # aux is an auxiliary point in the odom frame                
+                aux.header.frame_id = "/locobot/odom"
+                aux.header.stamp =rospy.Time(0)
+                aux.point.x=self.x_g
+                aux.point.y=self.y_g
+                aux.point.z=0.1 # To prevent the gripper from touching the ground
+                pos_in_arm=self.trans_listener.transformPoint("/locobot/base_link",aux)
 
-                if not self.check_align_error():
-                    self.switch_mode(Mode.GOAL_ALIGN)
+                # p is the goal where the gripper should be in base_link frame
+                p = PoseStamped()
+                p.header.frame_id = "locobot/base_link"
+                # x_g, y_g are the coordinates of the cube in 2-D
+                p.pose.position.x = pos_in_arm.point.x # self.x_g
+                p.pose.position.y = pos_in_arm.point.y # self.y_g
+                p.pose.position.z - pos_in_arm.point.z # 0.02 # To prevent the gripper from touching the ground
 
-                else:
-                    self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
-                    aux=PointStamped()
-                    # aux is an auxiliary point in the odom frame                
-                    aux.header.frame_id = "/locobot/odom"
-                    aux.header.stamp =rospy.Time(0)
-                    aux.point.x=self.x_g
-                    aux.point.y=self.y_g
-                    aux.point.z=0.1 # To prevent the gripper from touching the ground
-                    pos_in_arm=self.trans_listener.transformPoint("/locobot/base_link",aux)
+                # quat = tf.transformations.quaternion_from_euler(0, self.theta_g, 0)
+                p.pose.orientation.x = 0#quat[0]
+                p.pose.orientation.y = 0#quat[1]
+                p.pose.orientation.z = 0#quat[2]
+                p.pose.orientation.w = 1#quat[3]
 
-                    # p is the goal where the gripper should be in base_link frame
-                    p = PoseStamped()
-                    p.header.frame_id = "locobot/base_link"
-                    # x_g, y_g are the coordinates of the cube in 2-D
-                    p.pose.position.x = pos_in_arm.point.x # self.x_g
-                    p.pose.position.y = pos_in_arm.point.y # self.y_g
-                    p.pose.position.z - pos_in_arm.point.z # 0.02 # To prevent the gripper from touching the ground
-
-                    # quat = tf.transformations.quaternion_from_euler(0, self.theta_g, 0)
-                    p.pose.orientation.x = 0#quat[0]
-                    p.pose.orientation.y = 0#quat[1]
-                    p.pose.orientation.z = 0#quat[2]
-                    p.pose.orientation.w = 1#quat[3]
+                if self.mode == Mode.PICK:
                     rospy.loginfo("Moving to pick up cube")
                     rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                     rospy.loginfo("Goal: {}".format(p))
                     self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
                     rospy.loginfo("Picked up cube")
-                    self.toggle_drop_flag()
-                    self.switch_mode(Mode.IDLE)
-            
-            elif self.mode == Mode.DROP:
-                    
-                orient_error = self.headingError()    
-
-                if not self.check_align_error():
-                    self.switch_mode(Mode.GOAL_ALIGN)
-
-                else:
-                    self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
-                    aux=PointStamped()
-                    # aux is an auxiliary point in the odom frame                
-                    aux.header.frame_id = "/locobot/odom"
-                    aux.header.stamp =rospy.Time(0)
-                    aux.point.x=self.x_g
-                    aux.point.y=self.y_g
-                    aux.point.z=0.1 # To prevent the gripper from touching the ground
-                    pos_in_arm=self.trans_listener.transformPoint("/locobot/base_link",aux)
-
-                    # p is the goal where the gripper should be in base_link frame
-                    p = PoseStamped()
-                    p.header.frame_id = "locobot/base_link"
-                    # x_g, y_g are the coordinates of the cube in 2-D
-                    p.pose.position.x = pos_in_arm.point.x # self.x_g
-                    p.pose.position.y = pos_in_arm.point.y # self.y_g
-                    p.pose.position.z - pos_in_arm.point.z # 0.02 # To prevent the gripper from touching the ground
-
-                    # quat = tf.transformations.quaternion_from_euler(0, self.theta_g, 0)
-                    p.pose.orientation.x = 0#quat[0]
-                    p.pose.orientation.y = 0#quat[1]
-                    p.pose.orientation.z = 0#quat[2]
-                    p.pose.orientation.w = 1#quat[3]
+                elif self.mode == Mode.DROP:
                     rospy.loginfo("Moving to drop cube")
                     rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                     rospy.loginfo("Goal: {}".format(p))
                     self.move_arm_obj.move_gripper_down_to_drop_callback(p)
                     rospy.loginfo("Dropped cube")
-                    self.toggle_drop_flag()
-                    self.switch_mode(Mode.IDLE) 
-
+                self.toggle_drop_flag()
+                self.switch_mode(Mode.IDLE)
 
             self.publish_control()
             rate.sleep()

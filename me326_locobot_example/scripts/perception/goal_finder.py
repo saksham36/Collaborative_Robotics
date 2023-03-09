@@ -16,7 +16,7 @@ import os
 
 rp = rospkg.RosPack()
 CONFIG_FILE = os.path.join(rp.get_path("me326_locobot_example"), "scripts", "config.yaml")
-TEAM = "team_2"
+TEAM = "team_1"
 
 class GoalFinder:
     def __init__(self):
