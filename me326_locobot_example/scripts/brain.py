@@ -382,7 +382,6 @@ class Brain:
         self.current_plan_duration = t_new[-1]
 
         self.th_init = traj_new[0, 2]
-        self.heading_controller.load_goal(self.th_init)
 
         if not self.aligned(self.th_init) and self.mode != Mode.ALIGN:
             rospy.loginfo("Not aligned with start direction")
