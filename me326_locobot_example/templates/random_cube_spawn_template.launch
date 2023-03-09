@@ -5,6 +5,4 @@
     <param name="green_cube_model" textfile="$(find me326_locobot_example)/model/green_cube.urdf"/>
     <param name="red_cube_model" textfile="$(find me326_locobot_example)/model/red_cube.urdf"/>
     {{ADD_CUBES}}
-    <node name="spawn_locobot_2" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.9783811284968724 -y -0.6365743499477426 -z 0.1 -param green_cube_model -model locobot_2" respawn="false" output="screen"/>
-    <node name="spawn_locobot_3" pkg="gazebo_ros" type="spawn_model" args="-urdf -x 0.0495462338043025 -y -0.8277026164308642 -z 0.1 -param red_cube_model -model locobot_3" respawn="false" output="screen"/>
 </launch>

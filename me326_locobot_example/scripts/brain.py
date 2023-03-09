@@ -172,7 +172,7 @@ class Brain:
             cmd_vel.angular.z = 0.0
             self.vel_publisher.publish(cmd_vel)
             rospy.loginfo("Finished exploring world")
-            self.switch_mode(Mode.IDLE)
+            # self.switch_mode(Mode.IDLE)
             self.explore_theta = None
             self.total = 0
        
@@ -566,8 +566,7 @@ class Brain:
                     rospy.loginfo("Moving to pick up cube")
                     rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                     rospy.loginfo("Goal: {}".format(p))
-                    #self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
-                    # self.move_arm_obj()
+                    self.move_arm_obj.move_gripper_down_to_grasp_callback(p)
                     rospy.loginfo("Picked up cube")
                     self.toggle_drop_flag()
                     self.switch_mode(Mode.IDLE)
@@ -606,8 +605,7 @@ class Brain:
                     rospy.loginfo("Moving to drop cube")
                     rospy.loginfo("x_g: {}, y_g: {}".format(self.x_g, self.y_g))
                     rospy.loginfo("Goal: {}".format(p))
-                    #self.move_arm_obj.move_gripper_down_to_drop_callback(p)
-                    # self.move_arm_obj()
+                    self.move_arm_obj.move_gripper_down_to_drop_callback(p)
                     rospy.loginfo("Dropped cube")
                     self.toggle_drop_flag()
                     self.switch_mode(Mode.IDLE) 

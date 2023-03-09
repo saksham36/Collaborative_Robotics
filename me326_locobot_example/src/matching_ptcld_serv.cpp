@@ -303,30 +303,30 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
 		cv::Vec3f aux;
 		float dist;
 		// 0 Red
-		cv::subtract(cv::Vec3f(color[0], color[1], color[2]), cv::Vec3f(0, 200, 150), aux);
+		cv::subtract(cv::Vec3f(color[0], color[1], color[2]), cv::Vec3f(0, 180, 150), aux);
 		cv::pow(aux, 2, aux);
-		cv::multiply(aux, cv::Vec3f(1.0, 0.4, 0.4), aux);
+		cv::multiply(aux, cv::Vec3f(1.0, 0.3, 0.3), aux);
 		dist = cv::sum(aux)[0];
 		dist = std::sqrt(dist);
 		distance.push_back(dist);
 		// 1 Green
-		cv::subtract(cv::Vec3f(color[0], color[1], color[2]), cv::Vec3f(50, 200, 150), aux);
+		cv::subtract(cv::Vec3f(color[0], color[1], color[2]), cv::Vec3f(50, 180, 150), aux);
 		cv::pow(aux, 2, aux);
-		cv::multiply(aux, cv::Vec3f(1.0, 0.4, 0.4), aux);
+		cv::multiply(aux, cv::Vec3f(1.0, 0.3, 0.3), aux);
 		dist = cv::sum(aux)[0];
 		dist = std::sqrt(dist);
 		distance.push_back(dist);
 		// 2 Blue
 		cv::subtract(cv::Vec3f(color[0], color[1], color[2]), cv::Vec3f(110, 200, 150), aux);
 		cv::pow(aux, 2, aux);
-		cv::multiply(aux, cv::Vec3f(1.0, 0.4, 0.4), aux);
+		cv::multiply(aux, cv::Vec3f(1.0, 0.3, 0.3), aux);
 		dist = cv::sum(aux)[0];
 		dist = std::sqrt(dist);
 		distance.push_back(dist);
 		// 3 Yellow
 		cv::subtract(cv::Vec3f(color[0], color[1], color[2]), cv::Vec3f(25, 200, 150), aux);
 		cv::pow(aux, 2, aux);
-		cv::multiply(aux, cv::Vec3f(1.0, 0.4, 0.4), aux);
+		cv::multiply(aux, cv::Vec3f(1.0, 0.3, 0.3), aux);
 		dist = cv::sum(aux)[0];
 		dist = std::sqrt(dist);
 		distance.push_back(dist);
@@ -335,7 +335,7 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::Image::Const
 		
 		cv::Scalar mean, stddev;
 		cv::meanStdDev(distance, mean, stddev);
-		if (stddev[0] < 18) continue;
+		if (stddev[0] < 14 || mean[0] > 100) continue;
 
 		int idx = std::min_element(distance.begin(), distance.end()) - distance.begin();
 		std_msgs::ColorRGBA pc;
