@@ -75,9 +75,9 @@ class GoalFinder:
             self.stations_marker_pub[i]['msg'].pose.position.z = 0.0
 
     def ask_for_station_callback(self, msg):
+            rospy.loginfo("Received ask_for_station")
             station = self.config['stations'][0] #TODO: Station selection algo
-            bool_message = msg
-            self.station_pub_flag = bool_message.data # message, not true, so can go back and forth
+            self.station_pub_flag = msg.data # message, not true, so can go back and forth
             rospy.loginfo("station_pub_flag: {}".format(self.station_pub_flag))
             self.publish_goal(station[0], station[1])
 
@@ -122,8 +122,7 @@ class GoalFinder:
 
     def publish_goal(self, x, y):
         goal = Pose2D()
-        if self.station_pub_flag:# and from_perception == False:
-            rospy.loginfo("Publishing station as goal")
+        if self.station_pub_flag:
             goal.x = x
             goal.y = y
             self.dropped_cubes.append((self.x_g,self.y_g))
@@ -131,7 +130,6 @@ class GoalFinder:
             # goal.x = -0.5
             # goal.y = -0.5
         else:
-            rospy.loginfo("Publishing station as cube")
             goal.x = x
             goal.y = y
             # goal.x = 1

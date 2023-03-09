@@ -187,7 +187,7 @@ class Brain:
                 
 
     def goal_callback(self, data):
-        if self.mode not in [Mode.INIT, Mode.PICK, Mode.PARK, Mode.MOVE, Mode.GOAL_ALIGN, Mode.DROP, Mode.GOAL_ALIGN]:  # TODO: Check
+        if self.mode == Mode.IDLE:  # TODO: Check
             self.x_g = data.x
             self.y_g = data.y
             self.theta_g = data.theta
@@ -403,10 +403,6 @@ class Brain:
         self.switch_mode(Mode.MOVE)
 
     def headingError(self):
-
-        #angular error is the angle that cube is in base_frame
-        cube_frame = "/locobot/odom"
-        robot_frame = "/locobot/base_link"
         
         #want cube X, Y in ROBOT frame and have it in cubeframe
         self.trans_listener.waitForTransform("/locobot/odom", "/locobot/base_link", rospy.Time(0), rospy.Duration(1.0))
