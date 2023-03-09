@@ -91,14 +91,14 @@ class Brain:
         self.plant_start = [0.0,0.0]
 
         # robot limits
-        self.v_max = 0.22
+        self.v_max = 0.2
         self.om_max = 0.4
-        self.v_des = 0.12
+        self.v_des = 0.1
         self.start_pos_thresh = 0.15
 
         # threshold at which to stop moving
         self.at_thresh = 0.65
-        self.at_thresh_theta = 0.05
+        self.at_thresh_theta = 0.15
 
         # trajectory smoothing
         self.spline_alpha = 0.01
