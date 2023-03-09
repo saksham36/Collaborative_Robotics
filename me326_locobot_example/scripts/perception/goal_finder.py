@@ -175,8 +175,8 @@ class GoalFinder:
 
     
     def get_xy_from_cell_index(self, index):
-        x = index[1]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.x
-        y = index[0]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.y
+        x = index[0]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.x
+        y = index[1]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.y
         return x, y
 
     def get_grid_as_np(self, grid):
