@@ -106,6 +106,7 @@ class GoalFinder:
         cubes = np.hstack([cubes[0], cubes[1]]).reshape(-1,2)
 
         for cube in cubes:
+            rospy.loginfo("cube: {}".format(self.get_xy_from_cell_index(cube)))
             if tuple(cube.tolist()) in self.dropped_cubes:
                 aux = np.where((cubes == cube).all(axis=1))
                 if len(aux[0]) > 1:
@@ -175,8 +176,8 @@ class GoalFinder:
 
     
     def get_xy_from_cell_index(self, index):
-        x = index[0]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.x
-        y = index[1]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.y
+        x = index[1]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.x
+        y = index[0]*self.perception_grid.info.resolution + self.perception_grid.info.origin.position.y
         return x, y
 
     def get_grid_as_np(self, grid):
