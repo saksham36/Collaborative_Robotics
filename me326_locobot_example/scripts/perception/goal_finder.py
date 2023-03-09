@@ -182,6 +182,8 @@ class GoalFinder:
     
     def mask_grid(self, grid):
         for color in self.config['colors']:
+            print(color)
+            print(self.config['team_colors'])
             if color not in self.config['team_colors']:
                 if color == "red":
                     val = CubeColor.RED
