@@ -39,6 +39,9 @@ class GoalFinder:
         # Goal publisher
         self.goal_pub = rospy.Publisher('/locobot/goal', Pose2D, queue_size=10)
         self.goal_marker_pub = rospy.Publisher('/locobot/marker_goal', Marker, queue_size=1)
+
+        self.cubes = [(-1.0035, -0.0437), (-1.482, -1.0328), (0.922, -0.7169), (-1.824, 0.7602), (-0.3374, -1.1038672902109)]
+        self.num_cubes = 0
         
 
         # Perception Grid subscriber
@@ -135,17 +138,18 @@ class GoalFinder:
             return
         goal = Pose2D()
         if self.station_pub_flag:
-            goal.x = x
-            goal.y = y
+            goal.x = -1 #x
+            goal.y = 0 #y
             self.dropped_cubes.append((self.x_g,self.y_g))
             self.x_g, self.y_g = None, None
+            self.num_cubes += 1
             # goal.x = -0.5
             # goal.y = -0.5
         else:
             # x = 1
             # y = 1
-            goal.x = x
-            goal.y = y
+            goal.x = self.cubes[self.num_cubes][0]
+            goal.y = self.cubes[self.num_cubes][1]
             # goal.x = 1
             # goal.y = 1
         (_,rotation) = self.tf.lookupTransform('locobot/odom', \
