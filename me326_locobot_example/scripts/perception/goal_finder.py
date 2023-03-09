@@ -76,7 +76,11 @@ class GoalFinder:
 
     def ask_for_station_callback(self, msg):
         station = self.config['stations'][0] #TODO: Station selection algo
-        self.station_pub_flag = msg.data # message, not true, so can go back and forth
+        self.station_pub_flag = msg.data
+        if self.station_pub_flag:
+            self.x_g = station[0]
+            self.y_g = station[1]
+            self.publish_goal(self.x_g,self.y_g)
         rospy.loginfo("station_pub_flag: {}".format(self.station_pub_flag))
 
     def perception_callback(self, msg):
@@ -118,7 +122,7 @@ class GoalFinder:
             self.stations_marker_pub[i]['marker_pub'].publish(self.stations_marker_pub[i]['msg'])
 
     def publish_goal(self, x, y):
-        if self.station_pub_flag is None:
+        if self.station_pub_flag is None or self.x_g is None or self.y_g is None:
             return
         goal = Pose2D()
         if self.station_pub_flag:
