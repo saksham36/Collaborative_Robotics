@@ -429,14 +429,15 @@ class Brain:
                 self.theta_prev.append(self.theta)
 
             if self.mode == Mode.ALIGN:
-                if self.aligned(self.th_init):
-                    self.current_plan_start_time = rospy.get_rostime()
-                    if self.at_goal():
+                if self.at_goal():
+                    if self.aligned(self.theta_g):
                         if self.drop_flag:
                             self.switch_mode(Mode.DROP)
-                        else: 
+                        else:
                             self.switch_mode(Mode.PICK)
-                    else:
+                else:
+                    if self.aligned(self.th_init):
+                        self.current_plan_start_time = rospy.get_rostime()
                         self.switch_mode(Mode.MOVE)
 
             elif self.mode == Mode.MOVE:
