@@ -199,7 +199,7 @@ class Brain:
             cmd_vel.angular.z = 0.0
             self.vel_publisher.publish(cmd_vel)
             self.total = 0
-            self.started_flipping
+            self.started_flipping = False
             if self.drop_flag:
                 self.switch_mode(Mode.DROP)
             else:
