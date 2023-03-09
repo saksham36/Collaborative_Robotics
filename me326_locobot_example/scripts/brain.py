@@ -430,18 +430,22 @@ class Brain:
 
             if self.mode == Mode.ALIGN:
                 if self.at_goal():
+                    rospy.loginfo("Reached goal")
                     if self.aligned(self.theta_g):
                         if self.drop_flag:
                             self.switch_mode(Mode.DROP)
                         else:
                             self.switch_mode(Mode.PICK)
                 else:
+                    rospy.loginfo("Aligning with trajectory start")
                     if self.aligned(self.th_init):
                         self.current_plan_start_time = rospy.get_rostime()
                         self.switch_mode(Mode.MOVE)
 
             elif self.mode == Mode.MOVE:
-                if not self.close_to_plan_start():
+                if self.at_goal():
+                    self.switch_mode(Mode.ALIGN)
+                elif not self.close_to_plan_start():
                     rospy.loginfo("Replanning because far from start")
                     self.replan()
                 elif (
