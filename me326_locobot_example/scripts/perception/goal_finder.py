@@ -40,7 +40,7 @@ class GoalFinder:
         self.goal_pub = rospy.Publisher('/locobot/goal', Pose2D, queue_size=10)
         self.goal_marker_pub = rospy.Publisher('/locobot/marker_goal', Marker, queue_size=1)
 
-        self.cubes = [(-1.482, -1.0328), (-1.0035, -0.0437), (0.922, -0.7169), (-1.824, 0.7602), (-0.3374, -1.1038672902109)]
+        self.cubes = [(0.922, -0.7169), (-1.482, -1.0328), (-1.0035, -0.0437), (-1.824, 0.7602), (-0.3374, -1.1038672902109)]
         self.num_cubes = 0
         
 
