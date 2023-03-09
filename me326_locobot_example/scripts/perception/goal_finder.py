@@ -95,6 +95,8 @@ class GoalFinder:
 
         grid = self.mask_grid(grid)
 
+        rospy.loginfo("grid: {}".format(grid))
+
         ## TODO ##
         # Implement station - cubes logic
         # Now returning closest cube to robot
@@ -113,8 +115,10 @@ class GoalFinder:
         except Exception as e:
             return
         cube_pos = cubes[closest_cube]
+        rospy.loginfo("cube_pos: {}".format(cube_pos))
         if self.x_g is None or self.y_g is None or self.station_pub_flag is not None: # This is only for picking 1 cube
             x,y = self.get_xy_from_cell_index(cube_pos)
+            rospy.loginfo("x: {}, y: {}".format(x,y))
             self.x_g = x
             self.y_g = y
         self.publish_goal(self.x_g,self.y_g)
