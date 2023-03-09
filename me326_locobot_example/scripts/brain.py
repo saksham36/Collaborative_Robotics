@@ -382,6 +382,7 @@ class Brain:
         self.current_plan_duration = t_new[-1]
 
         self.th_init = traj_new[0, 2]
+        self.heading_controller.load_goal(self.th_init)
 
         if not self.aligned(self.th_init) and self.mode != Mode.ALIGN:
             rospy.loginfo("Not aligned with start direction")
@@ -432,6 +433,7 @@ class Brain:
             if self.mode == Mode.ALIGN:
                 if self.at_goal():
                     rospy.loginfo("Reached goal")
+                    self.heading_controller.load_goal(self.th_init)
                     if self.aligned(self.theta_g):
                         if self.drop_flag:
                             self.switch_mode(Mode.DROP)
@@ -445,6 +447,7 @@ class Brain:
 
             elif self.mode == Mode.MOVE:
                 if self.at_goal():
+                    self.heading_controller.load_goal(self.theta_g)
                     self.switch_mode(Mode.ALIGN)
                 elif not self.close_to_plan_start():
                     rospy.loginfo("Replanning because far from start")
