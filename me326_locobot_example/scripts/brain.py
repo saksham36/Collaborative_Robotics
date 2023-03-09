@@ -166,7 +166,7 @@ class Brain:
             self.prev_theta = self.theta
             self.total = 0
  
-        if self.total >= 0.01:#2 * np.pi: # TODO: Delete is None condition. Purely for debug
+        if self.total >= 2 * np.pi:
             cmd_vel = Twist()
             cmd_vel.linear.x = 0
             cmd_vel.angular.z = 0.0
