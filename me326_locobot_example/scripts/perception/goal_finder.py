@@ -13,7 +13,6 @@ import numpy as np
 from occupancy_grid import CubeColor
 import rospkg
 import os
-import seaborn as sns
 import matplotlib.pyplot as plt
 
 rp = rospkg.RosPack()
@@ -183,13 +182,7 @@ class GoalFinder:
         return x, y
 
     def get_grid_as_np(self, grid):
-        grid = np.array(grid.data, dtype=np.int8).reshape(grid.info.height, grid.info.width).T
-
-        heatmap = sns.heatmap(grid, cmap="YlGnBu", cbar=False, xticklabels=False, yticklabels=False)
-        heatmap.invert_yaxis()
-        heatmap.figure.savefig("heatmap.png")
-        plt.close(heatmap.figure)
-        
+        grid = np.array(grid.data, dtype=np.int8).reshape(grid.info.height, grid.info.width)
         return grid
 
     def get_robot_pos(self, grid):
