@@ -75,11 +75,9 @@ class GoalFinder:
             self.stations_marker_pub[i]['msg'].pose.position.z = 0.0
 
     def ask_for_station_callback(self, msg):
-        rospy.loginfo("Received ask_for_station")
         station = self.config['stations'][0] #TODO: Station selection algo
         self.station_pub_flag = msg.data # message, not true, so can go back and forth
         rospy.loginfo("station_pub_flag: {}".format(self.station_pub_flag))
-        self.publish_goal(station[0], station[1])
 
     def perception_callback(self, msg):
         # rospy.loginfo("Received perception grid")
