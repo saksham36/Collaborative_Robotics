@@ -175,6 +175,7 @@ class Brain:
             self.switch_mode(Mode.IDLE)
             self.explore_theta = None
             self.total = 0
+            self.publish_ask_station()
        
         else:
             cmd_vel = Twist()
@@ -229,7 +230,7 @@ class Brain:
             self.map_height,
             self.map_origin[0],
             self.map_origin[1],
-            3,
+            2,
             self.dilated_occupancy.data,
             0.7
         )

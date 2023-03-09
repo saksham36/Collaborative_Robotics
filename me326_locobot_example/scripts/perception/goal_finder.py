@@ -33,7 +33,7 @@ class GoalFinder:
         self.load_config()
         self.perception_grid = None
 
-        self.station_pub_flag = False
+        self.station_pub_flag = None
 
         # Goal publisher
         self.goal_pub = rospy.Publisher('/locobot/goal', Pose2D, queue_size=10)
@@ -75,11 +75,11 @@ class GoalFinder:
             self.stations_marker_pub[i]['msg'].pose.position.z = 0.0
 
     def ask_for_station_callback(self, msg):
-            rospy.loginfo("Received ask_for_station")
-            station = self.config['stations'][0] #TODO: Station selection algo
-            self.station_pub_flag = msg.data # message, not true, so can go back and forth
-            rospy.loginfo("station_pub_flag: {}".format(self.station_pub_flag))
-            self.publish_goal(station[0], station[1])
+        rospy.loginfo("Received ask_for_station")
+        station = self.config['stations'][0] #TODO: Station selection algo
+        self.station_pub_flag = msg.data # message, not true, so can go back and forth
+        rospy.loginfo("station_pub_flag: {}".format(self.station_pub_flag))
+        self.publish_goal(station[0], station[1])
 
     def perception_callback(self, msg):
         # rospy.loginfo("Received perception grid")
@@ -121,6 +121,8 @@ class GoalFinder:
             self.stations_marker_pub[i]['marker_pub'].publish(self.stations_marker_pub[i]['msg'])
 
     def publish_goal(self, x, y):
+        if self.goal_pub is None:
+            return
         goal = Pose2D()
         if self.station_pub_flag:
             goal.x = x
