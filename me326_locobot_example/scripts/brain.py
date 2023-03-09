@@ -289,7 +289,7 @@ class Brain:
             V, om = self.traj_controller.compute_control(
                 self.x, self.y, self.theta, t
             )
-        elif self.mode in Mode.ALIGN:
+        elif self.mode == Mode.ALIGN:
             V, om = self.heading_controller.compute_control(
                 self.x, self.y, self.theta, t
             )
