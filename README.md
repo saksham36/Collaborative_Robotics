@@ -17,7 +17,9 @@ Given:
 - Target configuration
 - Permissible color of blocks that can be picked up
 - Location of 4 possible base station locations
-  ![Target Configuration](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/target_config.png?raw=true)
+<p align="center">
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/target_config.png" alt="Target Configuration" style="width:50%"/>
+</p>
 
 ### Assumptions
 
@@ -38,7 +40,9 @@ We adopt a hierarchical Bayesian approach to solve this 2 agent problem. We form
 
 **State:** The state space S consists of all possible combinations of blocks in the 4 possible locations. A state can be represented as a 4 × 4 matrix
 
-![Initial State](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/init_state.png?raw=true)
+<p align="center">
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/init_state.png" alt="Initial State" style="width:50%"/>
+</p>
 
 **Action:** An action is the act of picking up a particular block and dropping it to a base station. Hence, the size of the action space |A| is equal to the number of blocks in the map. Additionally, since each robot can only pick some certain colors, which are disjoint to each other, the action space can be separated into A1, A2, where A1 ∪ A2 = A, and A1 ∩ A2 = ∅
 
@@ -46,7 +50,9 @@ We adopt a hierarchical Bayesian approach to solve this 2 agent problem. We form
 
 **Belief:** Is the probability of a location being a base station. In our problem, we have 4 possible locations, and 3 possible locations. So belief at time t is a 4 × 3 matrix. The initial belief is set to be an uniform distribution.
 
-![Initial Belief](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/init_belief.png?raw=true)
+<p align="center">
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/init_belief.png" alt="Inital Belief" style="width:50%"/>
+</p>
 
 ### Algorithm
 
@@ -62,23 +68,31 @@ When a robot has to select a cube to be placed at a location, it asks the follow
 2. Which color cube should I pick up?
 3. Which cube of the color decided should I pick up?
 
-![Algorithm Hierarchical Abstraction](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/hierarchical.png?raw=true)
+<p align="center">
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/hierarchical.png" alt="Algorithm Hierarchical Abstraction" />
+</p>
 
 - The high level controller answers the second question. Depending on what role the robot is adopting, using the information from the state, and current belief, to select the color from the list of allowed colored cubes that the robot can pick up, that will change the belief of the robot the most or the least, by conducting a 1-step rollout.
 - The meta-controller checks that the color selected, and resultant future belief, does not contradict the configuration requirements of the task.
 - The low-level controller answers the third question. Now that the high level controller has presented a valid color, the robot has to select a cube of that color. In our algorithm, the cube of the specified color that minimizes the expected time taken to pick and drop the cube is selected.
 
-![Time Equation](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/time.png?raw=true)
+<p align="center">
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/time.png" alt="Time Equation"/>
+</p>
 
 ### Bayesian Update
 
 Bayes update can be applied as follows:
 
-![Bayes Equation](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/bayes.png?raw=true)
+<p align="center">
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/bayes.png" alt="Bayesian Update" />
+</p>
 
 Which simplifies to:
 
-![Simplified Bayes Equation](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/bayes_simple.png?raw=true)
+<p align="center">
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/imgs/bayes_simple.png" alt="Simplified Bayes Update" />
+</p>
 
 The belief is then normalized. Additionally, since we assume that there are no extra blocks in the map, if 3 locations have blocks placed in them, then automatically, we set the probability of the empty location to be a base station to be 0.
 
@@ -114,9 +128,11 @@ Robot_1 chooses to put cube 1 which is red to goal B which it assumes is locatio
 
 ** Change in the state, belief, and configuration in time**
 
-![State](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/state_leader_0.gif)
-![Belief](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/belief_leader_0.gif)
-![Configuration](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/config_leader_0.gif)
+<p align="center">
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/state_leader_0.gif" alt="State" style="width:50%"/>
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/belief_leader_0.gif" alt="State" style="width:50%"/>
+  <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/config_leader_0.gif" alt="State" style="width:50%"/>
+</p>
 
 ### Case 2: Robot 2 is the first to complete exploration, and assumes leadership role, Robot 1 assumes follower role at t=0.
 
@@ -146,9 +162,20 @@ Robot_1 chooses to put cube 1 which is red to goal B which it assumes is locatio
 
 ** Change in the state, belief, and configuration in time**
 
-![State](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/state_leader_1.gif)
-![Belief](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/belief_leader_1.gif)
-![Configuration](https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/config_leader_1.gif)
+<p align="center">
+  <div align="center">
+    <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/state_leader_1.gif" alt="State" style="width:50%"/>
+    </div>
+
+  <div align="center">
+      <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/belief_leader_1.gif" alt="Belief" style="width:50%"/>
+  </div>
+
+  <div align="center">
+       <img src="https://github.com/saksham36/Collaborative_Robotics/blob/collab_strategy/gifs/config_leader_1.gif" alt="Config" style="width:50%"/>
+  </div>
+
+</p>
 
 The problem devolves into a turn-based game, due to the SMDP structure of the strategy. **This behavior emerges from the algorithm itself and is not hard-coded.**
 
