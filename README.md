@@ -61,7 +61,7 @@ $./xslocobot_remote_install.sh -d noetic -b kobuki
 
 Note: if you mess up while installing, just delete the interbotix_ws (from the level above the folder: `$ rm -rf interbotix_ws`) folder, then do the following in terminal `$ export ROS_IP=""`, then you can run the shell script again.
 
-## Additional Changes required.
+### Additional Changes required on Interbotix_ws to get the arm to work
 - Delete all ```CATKIN_IGNORE``` in the ```interbotix_ws``` folder
 - You'll need access to the LoCoBots in lab
 ```
@@ -78,3 +78,6 @@ pip install modern_robotics
 
 - If the gripper is not working, comment out line 444  of ```interbotix_ros_rovers/interbotix_ros_xslocobots/interbotix_xslocobot_descriptions/urdf/arms/mobile_wx250s.urdf.xacro```
 The line in question requires the right finger to inversely "mimic" the left finger. When you send a command to both fingers it throws an error because the position command is over defined even if both position commands are equal and opposite (ie. 0.015 & -0.015).
+
+## To run our code:
+From the ```me326_locobot_example/launch/``` run ```launch_locobot_main.sh```
