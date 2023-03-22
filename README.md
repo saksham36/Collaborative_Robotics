@@ -76,5 +76,5 @@ pip install modern_robotics
 ```
 
 
-- If the gripper is not working, comment out line 444  of '''interbotix_ros_rovers/interbotix_ros_xslocobots/interbotix_xslocobot_descriptions/urdf/arms/mobile_wx250s.urdf.xacro'''
+- If the gripper is not working, comment out line 444  of ```interbotix_ros_rovers/interbotix_ros_xslocobots/interbotix_xslocobot_descriptions/urdf/arms/mobile_wx250s.urdf.xacro```
 The line in question requires the right finger to inversely "mimic" the left finger. When you send a command to both fingers it throws an error because the position command is over defined even if both position commands are equal and opposite (ie. 0.015 & -0.015).
