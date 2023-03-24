@@ -2,6 +2,8 @@
 
 This repo is for getting started using Locobots in ME326 Collaborative Robotics Course at Stanford University taught by Prof. Monroe Kennedy ([Course Website](https://arm.stanford.edu/courses/me-326-collaborative-robotics))
 
+Website of our project can be found here: [Project website](https://sites.google.com/stanford.edu/cs339-2023/home)
+
 ## Getting Started
 If you are new to Linux ([how to install ubuntu/linux](https://ubuntu.com/tutorials/install-ubuntu-desktop#1-overview)) and ROS, the following are links you should start with once linux is installed: 
 - Download ROS (ROS 1, noetic is tested in this example): http://wiki.ros.org/ROS/Installation
